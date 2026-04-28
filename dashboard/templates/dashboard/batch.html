@@ -13,7 +13,7 @@
 <div class="bg-[#1e1e1e] border border-[#333333] rounded-lg p-lg mb-lg">
     <form method="POST" action="{% url 'batch_predict' %}" enctype="multipart/form-data" id="batch-form">
         {% csrf_token %}
-        <input type="file" name="file" id="file-upload" class="hidden" accept=".csv,.xlsx">
+        <input type="file" name="csv_file" id="file-upload" class="hidden" accept=".csv,.xlsx">
         
         <div id="drop-zone" class="border-2 border-dashed border-[#333333] rounded-lg p-xl flex flex-col items-center justify-center bg-[#121212] hover:bg-[#1a1b1f] hover:border-primary-container transition-colors cursor-pointer group relative">
             
@@ -107,5 +107,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/batch.js' %}"></script>
+<script src="{% static 'js/batch.js' %}?v=2"></script>
 {% endblock %}

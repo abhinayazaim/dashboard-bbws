@@ -20,14 +20,14 @@ class ManualPredictionForm(forms.Form):
     waktu = forms.DateTimeField(
         widget=forms.DateTimeInput(attrs={
             'type': 'datetime-local',
-            'class': 'form-input',
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
             'id': 'id_waktu',
         }),
         label='WAKTU',
     )
     curah_hujan_mm = forms.FloatField(
         widget=forms.NumberInput(attrs={
-            'class': 'form-input',
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
             'step': '0.01',
             'placeholder': '0.00',
             'id': 'id_curah_hujan',
@@ -38,7 +38,7 @@ class ManualPredictionForm(forms.Form):
     cuaca_kode = forms.ChoiceField(
         choices=CUACA_CHOICES,
         widget=forms.Select(attrs={
-            'class': 'form-input',
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
             'id': 'id_cuaca_kode',
         }),
         label='KODE CUACA',
@@ -46,14 +46,14 @@ class ManualPredictionForm(forms.Form):
     jam_kode = forms.ChoiceField(
         choices=JAM_CHOICES,
         widget=forms.Select(attrs={
-            'class': 'form-input',
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
             'id': 'id_jam_kode',
         }),
         label='JAM PENGUKURAN',
     )
     smd_kanan_q_ls = forms.FloatField(
         widget=forms.NumberInput(attrs={
-            'class': 'form-input',
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
             'step': '0.1',
             'placeholder': '0.0',
             'id': 'id_smd_kanan',
@@ -63,7 +63,7 @@ class ManualPredictionForm(forms.Form):
     )
     smd_kiri_q_ls = forms.FloatField(
         widget=forms.NumberInput(attrs={
-            'class': 'form-input',
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
             'step': '0.1',
             'placeholder': '0.0',
             'id': 'id_smd_kiri',
@@ -77,7 +77,7 @@ class BatchUploadForm(forms.Form):
     csv_file = forms.FileField(
         label='Upload File',
         widget=forms.FileInput(attrs={
-            'class': 'form-input',
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
             'accept': '.csv,.xlsx,.xls',
             'id': 'id_csv_file',
         })

@@ -1,32 +1,45 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const uploadZone = document.getElementById('uploadZone');
-    const batchForm = document.getElementById('batchForm');
-    const submitBtn = document.getElementById('submitBatchBtn');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const fileInput = document.getElementById('id_csv_file');
+    const dropZone = document.getElementById('drop-zone');
+    const batchForm = document.getElementById('batch-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const fileInput = document.getElementById('file-upload');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const browseBtn = document.getElementById('browse-btn');
+    const uploadContent = document.getElementById('upload-content');
+    const uploadProgress = document.getElementById('upload-progress');
+    const progressBarFill = document.getElementById('progress-bar-fill');
+    const cancelBtn = document.getElementById('cancel-btn');
 
-    if (!uploadZone) return;
+    if (!dropZone) return;
+
+    // Trigger file input when browse button or drop zone is clicked
+    browseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.click();
+    });
+
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
 
     // Drag & drop events with visual feedback
     ['dragenter', 'dragover'].forEach(e => {
-        uploadZone.addEventListener(e, (ev) => { 
+        dropZone.addEventListener(e, (ev) => { 
             ev.preventDefault(); 
-            uploadZone.style.borderColor = 'var(--primary-color)';
-            uploadZone.style.background = 'rgba(74, 124, 255, 0.05)';
+            dropZone.style.borderColor = '#4a7cff';
+            dropZone.style.background = 'rgba(74, 124, 255, 0.05)';
         });
     });
     
     ['dragleave', 'drop'].forEach(e => {
-        uploadZone.addEventListener(e, (ev) => { 
+        dropZone.addEventListener(e, (ev) => { 
             ev.preventDefault(); 
-            uploadZone.style.borderColor = '';
-            uploadZone.style.background = '';
+            dropZone.style.borderColor = '';
+            dropZone.style.background = '';
         });
     });
 
-    uploadZone.addEventListener('drop', (ev) => {
+    dropZone.addEventListener('drop', (ev) => {
         const files = ev.dataTransfer.files;
         if (files.length > 0) {
             fileInput.files = files;
@@ -34,8 +47,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Make handleFileSelect globally available if called from HTML onclick
-    window.handleFileSelect = function(input) {
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            handleFileSelect(fileInput);
+        }
+    });
+
+    function handleFileSelect(input) {
         const file = input.files[0];
         if (!file) return;
 
@@ -57,48 +75,37 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('previewSection').style.display = 'block';
-        document.getElementById('actionBar').style.display = 'flex';
-        uploadZone.style.display = 'none';
+        // Update UI
+        fileNameDisplay.textContent = file.name;
+        fileNameDisplay.classList.add('text-primary');
+        
+        // Enable buttons
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        submitBtn.classList.add('opacity-100');
+        
+        cancelBtn.classList.remove('hidden');
+    }
 
-        // CSV preview
-        if (file.name.endsWith('.csv')) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const lines = e.target.result.split('\n').filter(l => l.trim());
-                const headers = lines[0].split(',');
-                const headRow = '<tr>' + headers.map(h => '<th>' + h.trim() + '</th>').join('') + '</tr>';
-                document.getElementById('previewHead').innerHTML = headRow;
-
-                let bodyHTML = '';
-                const previewCount = Math.min(lines.length - 1, 4);
-                for (let i = 1; i <= previewCount; i++) {
-                    const cols = lines[i].split(',');
-                    bodyHTML += '<tr>' + cols.map(c => '<td>' + c.trim() + '</td>').join('') + '</tr>';
-                }
-                document.getElementById('previewBody').innerHTML = bodyHTML;
-                document.getElementById('rowCount').textContent = 'Showing ' + previewCount + ' of ' + (lines.length - 1) + ' rows';
-            };
-            reader.readAsText(file);
-        } else {
-            document.getElementById('previewHead').innerHTML = '<tr><th>File Excel terdeteksi - preview tidak tersedia</th></tr>';
-            document.getElementById('previewBody').innerHTML = '';
-            document.getElementById('rowCount').textContent = file.name;
-        }
-    };
-
-    window.resetUpload = function() {
+    function resetUpload() {
         fileInput.value = '';
-        document.getElementById('previewSection').style.display = 'none';
-        document.getElementById('actionBar').style.display = 'none';
-        progressContainer.style.display = 'none';
-        uploadZone.style.display = 'block';
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '📈 Mulai Prediksi';
-        }
-    };
+        fileNameDisplay.textContent = 'Tarik & Lepas File di Sini';
+        fileNameDisplay.classList.remove('text-primary');
+        
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        submitBtn.classList.remove('opacity-100');
+        
+        cancelBtn.classList.add('hidden');
+        uploadProgress.classList.add('hidden');
+        uploadContent.classList.remove('opacity-0');
+    }
+
+    cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        resetUpload();
+    });
 
     // Upload Simulation on form submit
     if (batchForm && submitBtn) {
@@ -107,26 +114,30 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '⏳ Mengunggah...';
-            progressContainer.style.display = 'block';
+            submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Mengunggah...';
+            cancelBtn.classList.add('hidden');
+            
+            uploadContent.classList.add('opacity-0');
+            setTimeout(() => {
+                uploadProgress.classList.remove('hidden');
+                uploadProgress.classList.add('flex');
+            }, 300);
             
             let progress = 0;
             const interval = setInterval(() => {
-                progress += Math.random() * 15; // Random jump
+                progress += Math.random() * 20; // Random jump
                 if (progress >= 100) {
                     progress = 100;
                     clearInterval(interval);
-                    progressBar.style.width = '100%';
-                    progressText.textContent = '100%';
-                    submitBtn.innerHTML = 'Memproses Data...';
+                    progressBarFill.style.width = '100%';
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Memproses...';
                     
                     // Actually submit the form after simulation
                     setTimeout(() => {
                         batchForm.submit();
                     }, 500);
                 } else {
-                    progressBar.style.width = progress + '%';
-                    progressText.textContent = Math.round(progress) + '%';
+                    progressBarFill.style.width = progress + '%';
                 }
             }, 200);
         });
