@@ -1,106 +1,111 @@
-{% extends "base.html" %}
-{% block title %}Batch Upload - Bajulmati{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Batch Upload - Bajulmati Dam{% endblock %}
 
 {% block content %}
-<div class="page-header" style="margin-bottom: 24px;">
-    <h2>Upload Batch Data</h2>
-    <p>Unggah file CSV atau Excel untuk prediksi massal.</p>
+<div class="mb-lg">
+    <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Upload Batch Data</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Unggah file CSV atau Excel untuk prediksi massal.</p>
 </div>
 
-<form method="POST" enctype="multipart/form-data" action="{% url 'batch_predict' %}" id="batchForm">
-    {% csrf_token %}
-    <!-- Upload Zone -->
-    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('id_csv_file').click();">
-        <div class="upload-icon">☁️</div>
-        <h3>Tarik & Lepas File di Sini</h3>
-        <p>Supported formats: .csv, .xlsx</p>
-        <button type="button" class="btn btn-outline" onclick="event.stopPropagation(); document.getElementById('id_csv_file').click();">📁 Browse Files</button>
-        <input type="file" id="id_csv_file" name="csv_file" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleFileSelect(this)">
-    </div>
-
-    <!-- Preview (hidden initially) -->
-    <div class="card preview-section" id="previewSection" style="display:none;">
-        <div class="preview-header">
-            <div class="card-title" style="margin-bottom:0;">📋 Preview Data</div>
-            <span class="file-badge" id="fileName"></span>
+<!-- Upload Card -->
+<div class="bg-[#1e1e1e] border border-[#333333] rounded-lg p-lg mb-lg">
+    <form method="POST" action="{% url 'batch_predict' %}" enctype="multipart/form-data" id="batch-form">
+        {% csrf_token %}
+        <input type="file" name="file" id="file-upload" class="hidden" accept=".csv,.xlsx">
+        
+        <div id="drop-zone" class="border-2 border-dashed border-[#333333] rounded-lg p-xl flex flex-col items-center justify-center bg-[#121212] hover:bg-[#1a1b1f] hover:border-primary-container transition-colors cursor-pointer group relative">
+            
+            <div id="upload-content" class="flex flex-col items-center justify-center">
+                <div class="w-16 h-16 rounded-full bg-primary-container/20 flex items-center justify-center mb-sm group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-primary text-3xl">cloud_upload</span>
+                </div>
+                <p class="font-h2 text-h2 text-on-surface mb-base" id="file-name-display">Tarik & Lepas File di Sini</p>
+                <p class="font-body-sm text-body-sm text-on-surface-variant mb-md">Supported formats: .csv, .xlsx</p>
+                <button type="button" id="browse-btn" class="bg-[#1e1e1e] border border-[#333333] text-on-surface px-md py-sm rounded hover:bg-[#2a2a2a] transition-colors font-body-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">folder_open</span>
+                    Browse Files
+                </button>
+            </div>
+            
+            <!-- Progress Bar Overlay (Hidden by default) -->
+            <div id="upload-progress" class="hidden absolute inset-0 bg-[#121212] flex-col items-center justify-center rounded-lg z-10 w-full px-xl">
+                <p class="font-body-sm text-on-surface-variant mb-2">Mengunggah dan Memproses...</p>
+                <div class="w-full bg-[#1e1e1e] rounded-full h-2 overflow-hidden border border-[#333333]">
+                    <div id="progress-bar-fill" class="bg-primary h-2 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
         </div>
-        <table class="data-table" id="previewTable">
-            <thead id="previewHead"></thead>
-            <tbody id="previewBody"></tbody>
+        
+        <div class="flex justify-end gap-md mt-md">
+            <button type="button" id="cancel-btn" class="bg-transparent border border-[#333333] text-[#e0e0e0] px-lg py-sm rounded hover:bg-[#2a2a2a] transition-colors font-body-md hidden">
+                Batal
+            </button>
+            <button type="submit" id="submit-btn" class="bg-[#1F3864] text-[#e0e0e0] px-lg py-sm rounded hover:bg-primary-container/90 transition-colors font-body-md flex items-center gap-2 opacity-50 cursor-not-allowed" disabled>
+                <span class="material-symbols-outlined">analytics</span>
+                Mulai Prediksi
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Preview Data Section (Only visible after upload if we want, or just show the result table) -->
+{% if result_df is not None %}
+<div class="bg-[#1e1e1e] border border-[#333333] rounded-lg overflow-hidden mb-lg">
+    <div class="p-margin border-b border-[#333333] flex justify-between items-center bg-[#1a1b1f]">
+        <h3 class="font-h2 text-h2 text-on-surface">Preview Data & Hasil</h3>
+        <span class="font-label-caps text-label-caps bg-surface-container-highest px-2 py-1 rounded text-on-surface-variant">Batch Session: {{ session.session_id|default:"-" }}</span>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-[#1e1e1e] border-b border-[#333333]">
+                    <th class="font-label-caps text-label-caps text-on-surface-variant p-sm">Waktu</th>
+                    <th class="font-label-caps text-label-caps text-on-surface-variant p-sm">Curah Hujan (mm)</th>
+                    <th class="font-label-caps text-label-caps text-on-surface-variant p-sm text-right">Debit Kanan (l/s)</th>
+                    <th class="font-label-caps text-label-caps text-on-surface-variant p-sm text-right">Debit Kiri (l/s)</th>
+                    <th class="font-label-caps text-label-caps text-on-surface-variant p-sm text-right">TMA Prediksi (m)</th>
+                    <th class="font-label-caps text-label-caps text-on-surface-variant p-sm text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody class="font-data-mono text-data-mono text-on-surface">
+                {% for row in preview_data %}
+                <tr class="border-b border-[#333333] hover:bg-[#2a2a2a] transition-colors {% if row.status == 'Bahaya' %}bg-error-container/10{% endif %}">
+                    <td class="p-sm text-on-surface-variant">{{ row.waktu }}</td>
+                    <td class="p-sm">{{ row.curah_hujan_mm|floatformat:2 }}</td>
+                    <td class="p-sm text-right">{{ row.smd_kanan_q_ls|floatformat:2 }}</td>
+                    <td class="p-sm text-right">{{ row.smd_kiri_q_ls|floatformat:2 }}</td>
+                    <td class="p-sm text-right {% if row.status == 'Bahaya' %}text-error font-bold{% endif %}">{{ row.tma_predicted|floatformat:3 }}</td>
+                    <td class="p-sm text-center">
+                        {% if row.status == 'Bahaya' %}
+                        <span class="inline-block bg-[#dc3545] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest pulse-bahaya">BAHAYA</span>
+                        {% else %}
+                        <span class="inline-block bg-secondary-container/20 text-secondary border border-secondary/50 font-label-caps text-[10px] px-2 py-1 rounded tracking-widest">NORMAL</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="p-sm text-center text-on-surface-variant">Tidak ada data untuk dipreview.</td></tr>
+                {% endfor %}
+            </tbody>
         </table>
-        <div class="preview-footer">
-            <span id="rowCount"></span>
-            <span class="validation-ok" id="validationMsg">✅ Data validation passed</span>
+    </div>
+    
+    <div class="p-sm border-t border-[#333333] bg-[#121212] flex justify-between items-center">
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Menampilkan {{ preview_data|length }} baris pertama dari file.</p>
+        <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1 font-body-sm text-body-sm text-secondary-fixed-dim">
+                <span class="material-symbols-outlined text-sm">check_circle</span>
+                Data diproses: {{ danger_count|add:normal_count }} baris
+            </span>
         </div>
     </div>
-
-    <!-- Actions -->
-    <div class="action-bar" id="actionBar" style="display:none;">
-        <button type="button" class="btn btn-outline" onclick="resetUpload()">Batal</button>
-        <button type="submit" class="btn btn-primary">📈 Mulai Prediksi</button>
-    </div>
-</form>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script>
-const uploadZone = document.getElementById('uploadZone');
-
-// Drag & drop events
-['dragenter', 'dragover'].forEach(e => {
-    uploadZone.addEventListener(e, (ev) => { ev.preventDefault(); uploadZone.classList.add('dragover'); });
-});
-['dragleave', 'drop'].forEach(e => {
-    uploadZone.addEventListener(e, (ev) => { ev.preventDefault(); uploadZone.classList.remove('dragover'); });
-});
-uploadZone.addEventListener('drop', (ev) => {
-    const files = ev.dataTransfer.files;
-    if (files.length > 0) {
-        document.getElementById('id_csv_file').files = files;
-        handleFileSelect(document.getElementById('id_csv_file'));
-    }
-});
-
-function handleFileSelect(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    document.getElementById('fileName').textContent = file.name;
-    document.getElementById('previewSection').style.display = 'block';
-    document.getElementById('actionBar').style.display = 'flex';
-    uploadZone.style.display = 'none';
-
-    // CSV preview
-    if (file.name.endsWith('.csv')) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const lines = e.target.result.split('\n').filter(l => l.trim());
-            const headers = lines[0].split(',');
-            const headRow = '<tr>' + headers.map(h => '<th>' + h.trim() + '</th>').join('') + '</tr>';
-            document.getElementById('previewHead').innerHTML = headRow;
-
-            let bodyHTML = '';
-            const previewCount = Math.min(lines.length - 1, 4);
-            for (let i = 1; i <= previewCount; i++) {
-                const cols = lines[i].split(',');
-                bodyHTML += '<tr>' + cols.map(c => '<td>' + c.trim() + '</td>').join('') + '</tr>';
-            }
-            document.getElementById('previewBody').innerHTML = bodyHTML;
-            document.getElementById('rowCount').textContent = 'Showing ' + previewCount + ' of ' + (lines.length - 1) + ' rows';
-        };
-        reader.readAsText(file);
-    } else {
-        document.getElementById('previewHead').innerHTML = '<tr><th>File Excel terdeteksi - preview tidak tersedia</th></tr>';
-        document.getElementById('previewBody').innerHTML = '';
-        document.getElementById('rowCount').textContent = file.name;
-    }
-}
-
-function resetUpload() {
-    document.getElementById('id_csv_file').value = '';
-    document.getElementById('previewSection').style.display = 'none';
-    document.getElementById('actionBar').style.display = 'none';
-    uploadZone.style.display = 'block';
-}
-</script>
+<script src="{% static 'js/batch.js' %}"></script>
 {% endblock %}

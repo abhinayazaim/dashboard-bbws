@@ -1,62 +1,97 @@
-{% extends "base.html" %}
-{% block title %}Manual Input - Bajulmati{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prediksi Manual - Bajulmati Dam{% endblock %}
 
 {% block content %}
-<div class="page-header" style="margin-bottom: 24px;">
-    <h2>Prediksi Manual</h2>
-    <p>Input data telemetri secara manual untuk mendapatkan prediksi TMA.</p>
+<div class="mb-lg">
+    <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Prediksi Manual</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Masukkan data metrik secara manual untuk mendapatkan hasil prediksi secara langsung.</p>
 </div>
 
-<div class="grid-form-result">
-    <div class="card">
-        <form method="POST" action="{% url 'predict' %}">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+    <!-- Form Card (8 cols) -->
+    <div class="lg:col-span-8 bg-surface-container border border-outline-variant rounded p-md">
+        <form method="POST" action="{% url 'predict' %}" class="grid grid-cols-1 md:grid-cols-2 gap-sm" id="predict-form">
             {% csrf_token %}
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="id_waktu">{{ form.waktu.label }}</label>
-                    {{ form.waktu }}
-                </div>
-                <div class="form-group">
-                    <label for="id_curah_hujan">{{ form.curah_hujan_mm.label }}</label>
-                    {{ form.curah_hujan_mm }}
-                </div>
+            
+            <div class="space-y-1">
+                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.waktu.label }}</label>
+                {{ form.waktu }}
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="id_cuaca_kode">{{ form.cuaca_kode.label }}</label>
-                    {{ form.cuaca_kode }}
-                </div>
-                <div class="form-group">
-                    <label for="id_jam_kode">{{ form.jam_kode.label }}</label>
-                    {{ form.jam_kode }}
-                </div>
+            
+            <div class="space-y-1">
+                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.curah_hujan_mm.label }}</label>
+                {{ form.curah_hujan_mm }}
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="id_smd_kanan">{{ form.smd_kanan_q_ls.label }}</label>
-                    {{ form.smd_kanan_q_ls }}
-                </div>
-                <div class="form-group">
-                    <label for="id_smd_kiri">{{ form.smd_kiri_q_ls.label }}</label>
-                    {{ form.smd_kiri_q_ls }}
-                </div>
+            
+            <div class="space-y-1">
+                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.cuaca_kode.label }}</label>
+                {{ form.cuaca_kode }}
             </div>
-            <button type="submit" class="btn btn-primary" style="margin-top:12px;">🔮 Prediksi Sekarang</button>
+            
+            <div class="space-y-1">
+                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.jam_kode.label }}</label>
+                {{ form.jam_kode }}
+            </div>
+            
+            <div class="space-y-1">
+                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.smd_kanan_q_ls.label }}</label>
+                {{ form.smd_kanan_q_ls }}
+            </div>
+            
+            <div class="space-y-1">
+                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.smd_kiri_q_ls.label }}</label>
+                {{ form.smd_kiri_q_ls }}
+            </div>
+
+            <!-- Wait, the original form only had these 6 inputs. We do not need the other inputs as they are computed automatically -->
+            
+            <div class="col-span-1 md:col-span-2 mt-4 flex gap-sm">
+                <button type="button" id="clear-btn" class="bg-surface border border-outline-variant hover:bg-surface-bright text-[#e0e0e0] font-h2 py-3 px-6 rounded transition-colors duration-200 flex-1">
+                    Reset
+                </button>
+                <button type="submit" id="predict-submit-btn" class="bg-primary-container hover:bg-primary-container/80 text-[#e0e0e0] font-h2 py-3 px-6 rounded transition-colors duration-200 flex-[2]">
+                    Prediksi Sekarang
+                </button>
+            </div>
         </form>
     </div>
 
-    <div class="result-card {% if result_status == 'Bahaya' %}bahaya{% elif result_status == 'Normal' %}normal{% endif %}">
-        <div class="result-label">Hasil Prediksi</div>
+    <!-- Result Box (4 cols) -->
+    <div class="lg:col-span-4 bg-surface-container border-t-2 {% if result_status == 'Bahaya' %}border-error{% else %}border-primary{% endif %} border-x border-b border-outline-variant rounded p-lg flex flex-col items-center justify-center min-h-[300px] shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative overflow-hidden">
         {% if result %}
-            <div class="result-value">{{ result }}<span class="result-unit">m</span></div>
-            <div class="result-badge">
-                <span class="badge {% if result_status == 'Bahaya' %}badge-bahaya{% else %}badge-normal{% endif %}">
-                    {{ result_status }}
-                </span>
+            {% if result_status == 'Bahaya' %}
+                <div class="absolute inset-0 bg-error-container/5 pointer-events-none"></div>
+            {% endif %}
+            <div class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-4 z-10">Hasil Prediksi</div>
+            <div class="font-display-lg text-[48px] text-on-surface font-bold tracking-tighter mb-6 z-10" id="result-value">
+                {{ result }} <span class="text-2xl text-on-surface-variant">m</span>
             </div>
+            
+            {% if result_status == 'Bahaya' %}
+            <div class="px-6 py-2 bg-[#dc3545] text-white rounded text-lg font-bold pulse-bahaya tracking-widest z-10 uppercase">
+                {{ result_status }}
+            </div>
+            {% else %}
+            <div class="px-6 py-2 bg-secondary-container text-white rounded text-lg font-bold tracking-widest z-10 uppercase">
+                {{ result_status }}
+            </div>
+            {% endif %}
+            
+            <button id="copy-btn" class="mt-6 flex items-center gap-2 text-primary hover:text-primary-fixed-dim transition-colors z-10 bg-transparent border-none cursor-pointer">
+                <span class="material-symbols-outlined text-sm">content_copy</span> Copy Hasil
+            </button>
         {% else %}
-            <div style="color:var(--text-muted);font-size:13px;">Masukkan data untuk melihat prediksi</div>
+            <div class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-4 z-10 text-center">
+                <span class="material-symbols-outlined text-4xl block mb-2 opacity-50">data_object</span>
+                Masukkan data untuk<br>melihat prediksi
+            </div>
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/predict.js' %}"></script>
 {% endblock %}

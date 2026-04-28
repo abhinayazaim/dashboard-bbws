@@ -1,76 +1,218 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="id">
+<html class="dark" lang="id">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Bajulmati Dam Hydrological Prediction Suite">
-    <title>{% block title %}Bajulmati Dashboard{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <title>{% block title %}Sistem TMA Bajulmati{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    {% block extra_head %}{% endblock %}
-</head>
-<body>
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h1>BAJULMATI DAM</h1>
-            <p>Hydrological Suite</p>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="{% url 'index' %}" class="nav-item {% if active_page == 'dashboard' or not active_page %}active{% endif %}" id="nav-dashboard">
-                <span class="icon">📊</span> Dashboard
-            </a>
-            <a href="{% url 'predict' %}" class="nav-item {% if active_page == 'predict' %}active{% endif %}" id="nav-predict">
-                <span class="icon">✏️</span> Manual Input
-            </a>
-            <a href="{% url 'batch_predict' %}" class="nav-item {% if active_page == 'batch' %}active{% endif %}" id="nav-batch">
-                <span class="icon">📁</span> Batch Upload
-            </a>
-            <a href="{% url 'history' %}" class="nav-item {% if active_page == 'history' %}active{% endif %}" id="nav-history">
-                <span class="icon">🕐</span> History
-            </a>
-            <a href="{% url 'model_info' %}" class="nav-item {% if active_page == 'model_info' %}active{% endif %}" id="nav-model">
-                <span class="icon">📈</span> Model Info
-            </a>
-        </nav>
-        <div class="sidebar-footer">
-            <a href="#" class="nav-item" id="nav-status">
-                <span class="icon">⚙️</span> System Status
-            </a>
-        </div>
-    </aside>
 
-    <!-- Top Bar -->
-    <header class="topbar">
-        <span class="topbar-title">Hydrological Prediction Suite</span>
-        <div class="topbar-right">
-            <div class="topbar-icons">
-                <span title="Notifications">🔔</span>
-                <span title="Settings">⚙️</span>
-                <span title="Help">❓</span>
+    <!-- Tailwind Config -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffddbb",
+                        "tertiary": "#f4bc7f",
+                        "surface": "#121316",
+                        "error": "#ffb4ab",
+                        "outline-variant": "#44474f",
+                        "on-tertiary-fixed": "#2b1700",
+                        "on-primary-fixed": "#001a41",
+                        "outline": "#8e909a",
+                        "surface-container-lowest": "#0d0e11",
+                        "tertiary-container": "#543100",
+                        "tertiary-fixed-dim": "#f4bc7f",
+                        "on-surface": "#e3e2e6",
+                        "on-secondary-fixed": "#002106",
+                        "inverse-surface": "#e3e2e6",
+                        "primary-container": "#1f3864",
+                        "on-background": "#e3e2e6",
+                        "primary-fixed": "#d8e2ff",
+                        "primary-fixed-dim": "#afc6fb",
+                        "surface-dim": "#121316",
+                        "on-tertiary-fixed-variant": "#643e0c",
+                        "on-secondary-fixed-variant": "#00531a",
+                        "surface-tint": "#afc6fb",
+                        "surface-container": "#1f1f23",
+                        "surface-variant": "#343538",
+                        "secondary-container": "#27a644",
+                        "on-primary": "#152f5b",
+                        "surface-bright": "#38393c",
+                        "on-secondary": "#00390f",
+                        "primary": "#afc6fb",
+                        "on-primary-fixed-variant": "#2e4673",
+                        "inverse-primary": "#475e8c",
+                        "on-tertiary": "#482900",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#66df75",
+                        "secondary": "#66df75",
+                        "inverse-on-surface": "#2f3034",
+                        "secondary-fixed": "#83fc8e",
+                        "on-primary-container": "#8ba2d5",
+                        "on-surface-variant": "#c4c6d0",
+                        "on-error": "#690005",
+                        "surface-container-low": "#1a1b1f",
+                        "surface-container-high": "#292a2d",
+                        "on-secondary-container": "#00320c",
+                        "surface-container-highest": "#343538",
+                        "on-tertiary-container": "#cc995f",
+                        "background": "#121316",
+                        "error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xl": "48px",
+                        "gutter": "20px",
+                        "lg": "32px",
+                        "md": "24px",
+                        "base": "4px",
+                        "sm": "16px",
+                        "margin": "24px",
+                        "xs": "8px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "h1": ["Inter"],
+                        "h2": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "data-mono": ["Space Grotesk"],
+                        "body-sm": ["Inter"],
+                        "label-caps": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "h1": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "h2": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "display-lg": ["36px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "data-mono": ["14px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+            70% { box-shadow: 0 0 0 4px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+        .pulse-bahaya, .badge-bahaya {
+            animation: pulse-red 1.5s infinite;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121316;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #343538;
+            border-radius: 4px;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex">
+    
+    <!-- SideNavBar -->
+    <nav class="fixed left-0 top-0 h-full flex flex-col z-40 bg-zinc-950 border-r border-zinc-800 w-64">
+        <div class="p-6 border-b border-zinc-800 flex items-center gap-4">
+            <div class="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center overflow-hidden">
+                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8NP2QkHDh3FOwTUL9_wIojrkQfZuoVAe1bjMlLMl-ZUueK372sVWZfbsLd3FxIfh1gp7HIQ2kIprY7AMxPdcuI_T2FXefQdp30Fl1hV4YfukzHjfHGwhnK2O6u9AD1wxovHNOhO70SLoGcC37q4m-2ob7BwfNH1QxVcXt3yXMold7tk2z5kfgB_yMoCGN-wZrEpz9pAQqvB_yUb0DFqiyEHie5YKD_0qD-us2ZULUkDX5shcmuNzEOTJ0rhJzFbQx2pBzydrBWY8" alt="Dam Icon" class="w-full h-full object-cover">
             </div>
-            <span class="status-badge operational" id="system-status-badge">
-                <span class="dot"></span>
-                System: Operational
-            </span>
+            <div>
+                <h1 class="text-blue-500 font-bold uppercase tracking-widest text-xs">Bajulmati Dam</h1>
+                <p class="text-zinc-500 text-xs mt-1">Hydrological Suite</p>
+            </div>
+        </div>
+        
+        <div class="flex flex-col py-4 gap-2 px-2 flex-grow">
+            <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
+                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'index' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>dashboard</span>
+                Dashboard
+            </a>
+            <a href="{% url 'predict' %}" class="{% if request.resolver_match.url_name == 'predict' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
+                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'predict' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>edit_note</span>
+                Manual Input
+            </a>
+            <a href="{% url 'batch_predict' %}" class="{% if request.resolver_match.url_name == 'batch_predict' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
+                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'batch_predict' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>upload_file</span>
+                Batch Upload
+            </a>
+            <a href="{% url 'history' %}" class="{% if request.resolver_match.url_name == 'history' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
+                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'history' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>history</span>
+                History
+            </a>
+            <a href="{% url 'model_info' %}" class="{% if request.resolver_match.url_name == 'model_info' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
+                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'model_info' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>analytics</span>
+                Model Info
+            </a>
+        </div>
+        
+        <div class="flex flex-col space-y-1 mt-auto pb-4 px-2">
+            <a class="text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-colors duration-150 rounded" href="#">
+                <span class="material-symbols-outlined text-xl">sensors</span>
+                <span>System Status</span>
+            </a>
+            <a class="text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-colors duration-150 rounded" href="#">
+                <span class="material-symbols-outlined text-xl">logout</span>
+                <span>Logout</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- TopNavBar -->
+    <header class="fixed top-0 right-0 left-64 flex justify-between items-center px-8 h-16 z-30 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800">
+        <div class="flex items-center">
+            <span class="text-xl font-black text-blue-500">Hydrological Prediction Suite</span>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="flex gap-4 text-zinc-400">
+                <button class="hover:text-blue-300 transition-colors active:scale-95 duration-75"><span class="material-symbols-outlined">notifications</span></button>
+                <button class="hover:text-blue-300 transition-colors active:scale-95 duration-75"><span class="material-symbols-outlined">settings</span></button>
+                <button class="hover:text-blue-300 transition-colors active:scale-95 duration-75"><span class="material-symbols-outlined">help_outline</span></button>
+            </div>
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded bg-secondary-container/20 border border-secondary-container text-secondary">
+                <span class="w-2 h-2 rounded-full bg-secondary"></span>
+                <span class="font-label-caps text-label-caps uppercase tracking-widest text-[10px]">System: Operational</span>
+            </div>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {% if message.tags == 'success' %}✅{% else %}⚠️{% endif %}
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        {% block content %}{% endblock %}
+    <!-- Main Content Area -->
+    <main class="ml-64 mt-16 p-lg w-full overflow-y-auto">
+        <div class="max-w-[1920px] mx-auto w-full">
+            {% block content %}
+            {% endblock %}
+        </div>
     </main>
 
-    {% block scripts %}{% endblock %}
+    <script src="{% static 'js/base.js' %}"></script>
+    {% block scripts %}
+    {% endblock %}
 </body>
 </html>

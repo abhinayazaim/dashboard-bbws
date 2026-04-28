@@ -75,6 +75,21 @@ def index_view(request):
     result = None
     result_status = None
 
+    # Load static test results for the model performance chart
+    static_chart_labels = []
+    static_chart_actuals = []
+    static_chart_predicteds = []
+    import os
+    from django.conf import settings
+    static_results_path = os.path.join(settings.BASE_DIR, 'models', 'static_test_results.json')
+    if os.path.exists(static_results_path):
+        with open(static_results_path, 'r') as f:
+            static_data = json.load(f)
+            # Only send the last 100 points to keep UI clean
+            static_chart_labels = static_data.get('labels', [])[-100:]
+            static_chart_actuals = static_data.get('actuals', [])[-100:]
+            static_chart_predicteds = static_data.get('predicteds', [])[-100:]
+
     if request.method == 'POST':
         form = ManualPredictionForm(request.POST)
         if form.is_valid():
@@ -131,6 +146,9 @@ def index_view(request):
         'form': form,
         'result': result,
         'result_status': result_status,
+        'static_chart_labels': json.dumps(static_chart_labels),
+        'static_chart_actuals': json.dumps(static_chart_actuals),
+        'static_chart_predicteds': json.dumps(static_chart_predicteds),
     }
     return render(request, 'dashboard/index.html', context)
 
@@ -240,6 +258,10 @@ def batch_predict_view(request):
                     elif pred_status == 'Normal':
                         normal_count += 1
 
+                    pred_val = row.get('tma_predicted', 0.0)
+                    if pd.isna(pred_val):
+                        pred_val = 0.0
+
                     records.append(PredictionRecord(
                         curah_hujan_mm=row.get('curah_hujan_mm', 0),
                         cuaca_kode=row.get('cuaca_kode', 0),
@@ -251,7 +273,7 @@ def batch_predict_view(request):
                         delta_tma=row.get('delta_tma', 0),
                         tma_rolling_mean_3=row.get('tma_rolling_mean_3', 0),
                         jam_kode=row.get('jam_kode', 0),
-                        tma_predicted=row.get('tma_predicted', 0.0),
+                        tma_predicted=pred_val,
                         status=pred_status,
                         threshold_used=engine.get_threshold(),
                         source='Batch',

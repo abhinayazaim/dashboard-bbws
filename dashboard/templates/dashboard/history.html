@@ -1,101 +1,139 @@
-{% extends "base.html" %}
-{% block title %}History - Bajulmati{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Riwayat Prediksi - Bajulmati Dam{% endblock %}
 
 {% block content %}
-<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
-    <div class="page-header">
-        <h2>Riwayat Prediksi</h2>
-        <p>Log historis data telemetri dan hasil prediksi TMA.</p>
+<div class="flex justify-between items-center mb-lg">
+    <div>
+        <h2 class="font-h1 text-h1 text-on-surface mb-xs">Riwayat Prediksi</h2>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Log historis data telemetri dan hasil prediksi TMA.</p>
     </div>
-    <div class="export-bar">
-        <a href="{% url 'export_csv' %}?date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}" class="btn btn-outline">⬇️ Export CSV</a>
-        <a href="{% url 'export_pdf' %}?date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}" class="btn btn-outline">📄 Export PDF</a>
+    <div class="flex gap-sm">
+        <a href="{% url 'export_csv' %}" class="flex items-center gap-xs px-4 py-2 bg-transparent border border-[#333333] text-[#e0e0e0] font-label-caps text-label-caps rounded hover:bg-surface-bright transition-colors text-center" id="export-csv">
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            EXPORT CSV
+        </a>
+        <a href="{% url 'export_pdf' %}" class="flex items-center gap-xs px-4 py-2 bg-transparent border border-[#333333] text-[#e0e0e0] font-label-caps text-label-caps rounded hover:bg-surface-bright transition-colors text-center" id="export-pdf">
+            <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+            EXPORT PDF
+        </a>
     </div>
 </div>
 
-<!-- Filters -->
-<form method="GET" action="{% url 'history' %}">
-<div class="filter-bar">
-    <label>Rentang Waktu</label>
-    <input type="date" name="date_from" value="{{ date_from }}" class="form-input" placeholder="Dari">
-    <span style="color:var(--text-muted);">-</span>
-    <input type="date" name="date_to" value="{{ date_to }}" class="form-input" placeholder="Sampai">
-    <label style="margin-left:12px;">Status</label>
-    <select name="status" class="form-input" style="min-width:140px;">
-        <option value="">Semua Status</option>
-        <option value="Normal" {% if status_filter == 'Normal' %}selected{% endif %}>Normal</option>
-        <option value="Bahaya" {% if status_filter == 'Bahaya' %}selected{% endif %}>Bahaya</option>
-    </select>
-    <input type="text" name="q" value="{{ search_query }}" class="form-input search-input" placeholder="🔍 Cari ID atau catatan...">
-    <button type="submit" class="btn btn-primary" style="padding:8px 16px;">Filter</button>
+<!-- Filter Bar -->
+<div class="bg-[#1e1e1e] border border-[#333333] rounded p-sm mb-lg flex flex-wrap gap-md items-center">
+    <!-- Date Range Filter -->
+    <div class="flex items-center gap-xs">
+        <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Rentang Waktu</label>
+        <div class="flex items-center gap-2">
+            <button class="bg-[#121212] border border-[#333333] text-on-surface text-xs px-3 py-1.5 rounded hover:bg-[#2a2a2a] filter-btn" data-filter="today">Hari Ini</button>
+            <button class="bg-[#121212] border border-[#333333] text-on-surface text-xs px-3 py-1.5 rounded hover:bg-[#2a2a2a] filter-btn" data-filter="7days">7 Hari</button>
+            <button class="bg-[#121212] border border-[#333333] text-on-surface text-xs px-3 py-1.5 rounded hover:bg-[#2a2a2a] filter-btn" data-filter="30days">30 Hari</button>
+            <button class="bg-primary-container text-white text-xs px-3 py-1.5 rounded filter-btn" data-filter="all">Semua</button>
+        </div>
+    </div>
+    
+    <!-- Status Filter -->
+    <div class="flex items-center gap-xs ml-auto">
+        <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Status</label>
+        <select id="status-filter" class="bg-[#121212] border border-[#333333] text-on-surface font-body-sm text-body-sm rounded py-1.5 pl-3 pr-8 focus:ring-[#1F3864] focus:border-[#1F3864]">
+            <option value="all">Semua Status</option>
+            <option value="Normal">Normal</option>
+            <option value="Bahaya">Bahaya</option>
+        </select>
+    </div>
+    
+    <!-- Search -->
+    <div class="flex items-center">
+        <div class="relative w-64">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+            <input type="text" id="search-input" class="w-full bg-[#121212] border border-[#333333] text-on-surface font-body-sm text-body-sm rounded py-1.5 pl-9 pr-3 focus:ring-[#1F3864] focus:border-[#1F3864] placeholder:text-on-surface-variant" placeholder="Cari ID sesi...">
+        </div>
+    </div>
 </div>
-</form>
 
 <!-- Data Table -->
-<div class="card" style="padding:0;overflow:hidden;">
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>No</th>
-                <th>Waktu Prediksi</th>
-                <th>TMA (m)</th>
-                <th>Curah Hujan (mm)</th>
-                <th>Debit (L/s)</th>
-                <th>Status</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for p in page_obj %}
-            <tr>
-                <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
-                <td>{{ p.created_at|date:"Y-m-d H:i:s" }}</td>
-                <td class="{% if p.status == 'Bahaya' %}tma-danger{% else %}tma-value{% endif %}">{{ p.tma_predicted|floatformat:2 }}</td>
-                <td>{{ p.curah_hujan_mm|floatformat:1 }}</td>
-                <td>{{ p.smd_kanan_q_ls|floatformat:0 }}</td>
-                <td>
-                    <span class="badge {% if p.status == 'Bahaya' %}badge-bahaya{% elif p.status == 'Normal' %}badge-normal{% else %}badge-pending{% endif %}">
-                        {{ p.status }}
-                    </span>
-                </td>
-                <td><span class="action-link" title="Detail">👁️</span></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">Belum ada data prediksi.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- Pagination -->
-{% if page_obj.has_other_pages %}
-<div class="pagination-bar">
-    <span>Menampilkan {{ page_obj.start_index }}-{{ page_obj.end_index }} dari {{ total_count }} data</span>
-    <div class="pagination-pages">
-        {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}&q={{ search_query }}" class="page-btn">&lt;</a>
-        {% else %}
-            <span class="page-btn disabled">&lt;</span>
-        {% endif %}
-
-        {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-                <span class="page-btn active">{{ num }}</span>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <a href="?page={{ num }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}&q={{ search_query }}" class="page-btn">{{ num }}</a>
-            {% elif num == 1 or num == page_obj.paginator.num_pages %}
-                <a href="?page={{ num }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}&q={{ search_query }}" class="page-btn">{{ num }}</a>
-            {% elif num == 2 or num == page_obj.paginator.num_pages|add:'-1' %}
-                <span class="page-btn disabled">...</span>
-            {% endif %}
-        {% endfor %}
-
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}&q={{ search_query }}" class="page-btn">&gt;</a>
-        {% else %}
-            <span class="page-btn disabled">&gt;</span>
-        {% endif %}
+<div class="bg-[#1e1e1e] border border-[#333333] rounded overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse" id="history-table">
+            <thead class="bg-[#1e1e1e] border-b border-[#333333]">
+                <tr>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest w-12 text-center">No</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Waktu Prediksi</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">TMA (m)</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">Curah Hujan (mm)</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">Debit Kanan (l/s)</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-center">Status</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-center">Sumber</th>
+                </tr>
+            </thead>
+            <tbody class="font-data-mono text-data-mono text-on-surface">
+                {% for p in page_obj %}
+                <tr class="border-b border-[#333333] hover:bg-[#2a2a2a] transition-colors history-row" data-status="{{ p.status }}" data-date="{{ p.created_at|date:'Y-m-d' }}" data-session="{{ p.batch_session.session_id|default:'' }}">
+                    <td class="px-sm py-3 text-center text-on-surface-variant">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                    <td class="px-sm py-3">{{ p.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td class="px-sm py-3 text-right {% if p.status == 'Bahaya' %}text-error font-bold{% endif %}">{{ p.tma_predicted|floatformat:3 }}</td>
+                    <td class="px-sm py-3 text-right">{{ p.curah_hujan_mm|floatformat:1 }}</td>
+                    <td class="px-sm py-3 text-right">{{ p.smd_kanan_q_ls|floatformat:1 }}</td>
+                    <td class="px-sm py-3 text-center">
+                        {% if p.status == 'Bahaya' %}
+                        <span class="inline-block bg-[#dc3545] text-white font-label-caps text-[10px] px-2 py-1 rounded badge-bahaya tracking-widest">BAHAYA</span>
+                        {% else %}
+                        <span class="inline-block bg-[#27a644] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest">NORMAL</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-sm py-3 text-center">
+                        {% if p.source == 'Batch' %}
+                            <span class="text-xs text-on-surface-variant bg-surface-container px-2 py-1 rounded" title="Batch ID: {{ p.batch_session.session_id }}">Batch</span>
+                        {% else %}
+                            <span class="text-xs text-on-surface-variant bg-surface-container px-2 py-1 rounded">Manual</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-sm py-8 text-center text-on-surface-variant font-body-sm">
+                        Tidak ada riwayat prediksi yang ditemukan.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="bg-[#1e1e1e] border-t border-[#333333] p-sm flex items-center justify-between">
+        <span class="font-body-sm text-body-sm text-on-surface-variant">Menampilkan {{ page_obj.start_index }}-{{ page_obj.end_index }} dari {{ paginator.count }} data</span>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant hover:bg-[#2a2a2a] hover:text-on-surface">
+                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </a>
+            {% else %}
+            <button class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant opacity-50 cursor-not-allowed" disabled>
+                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </button>
+            {% endif %}
+            
+            <button class="w-8 h-8 flex items-center justify-center rounded bg-[#1F3864] text-[#e0e0e0] font-data-mono text-data-mono">{{ page_obj.number }}</button>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant hover:bg-[#2a2a2a] hover:text-on-surface">
+                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+            </a>
+            {% else %}
+            <button class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant opacity-50 cursor-not-allowed" disabled>
+                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
-{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/history.js' %}"></script>
 {% endblock %}

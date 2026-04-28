@@ -405,7 +405,8 @@ class MLEngine:
             X_batch = []
             valid_indices = []
 
-            for i in range(look_back - 1 + offset, len(data_scaled)):
+            start_idx = offset if self.seed_history is not None else look_back - 1
+            for i in range(start_idx, len(data_scaled)):
                 X_batch.append(data_scaled[i - look_back + 1: i + 1])
                 valid_indices.append(i - offset)  # map back to original df index
 

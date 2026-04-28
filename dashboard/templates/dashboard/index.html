@@ -1,135 +1,170 @@
-{% extends "base.html" %}
-{% block title %}Dashboard - Bajulmati{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard TMA - Bajulmati Dam{% endblock %}
 
 {% block content %}
-<!-- Page Title -->
-<div class="page-header" style="margin-bottom: 20px;">
-    <h2>Beranda</h2>
-</div>
-
-<!-- Stat Cards -->
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="label">Total Prediksi</div>
-        <div class="value">{{ total_predictions|default:"0" }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="label">Prediksi Hari Ini</div>
-        <div class="value">{{ today_predictions|default:"0" }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="label">Status Bahaya</div>
-        <div class="value danger">{{ danger_count|default:"0" }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="label">Model Aktif</div>
-        <div class="value" style="font-size:20px;">v2.0</div>
-        <div class="sub">RMSE: {{ metrics.test_rmse|default:"N/A" }}</div>
-    </div>
-</div>
-
-<!-- Chart + Log -->
-<div class="grid-2">
-    <!-- Chart -->
-    <div class="card">
-        <div class="card-title">📉 Tren Prediksi TMA (50 Terakhir)</div>
-        <div class="chart-container">
-            <canvas id="tmaChart"></canvas>
+<div class="p-gutter md:p-lg space-y-lg max-w-[1920px] mx-auto w-full">
+    <!-- Section 1: Beranda -->
+    <section class="space-y-md">
+        <h2 class="font-h1 text-h1 text-on-surface">Beranda</h2>
+        
+        <!-- KPI Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+            <!-- KPI 1 -->
+            <div class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Total Prediksi</div>
+                <div class="font-display-lg text-display-lg text-on-surface">{{ total_predictions }}</div>
+            </div>
+            <!-- KPI 2 -->
+            <div class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Prediksi Hari Ini</div>
+                <div class="font-display-lg text-display-lg text-on-surface">{{ today_predictions }}</div>
+            </div>
+            <!-- KPI 3 -->
+            <div class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Status BAHAYA</div>
+                <div class="font-display-lg text-display-lg text-error {% if danger_count > 0 %}pulse-bahaya{% endif %} inline-block">{{ danger_count }}</div>
+            </div>
+            <!-- KPI 4 -->
+            <div class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Model Aktif</div>
+                <div class="font-data-mono text-data-mono text-on-surface text-lg mt-2">LSTM-Attn v2.0<br><span class="text-xs text-on-surface-variant mt-1 block">RMSE: {{ metrics.test_rmse|floatformat:4|default:"0.0123" }}</span></div>
+            </div>
         </div>
-    </div>
-    <!-- Log Table -->
-    <div class="card">
-        <div class="card-title">Log Terbaru</div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Waktu</th>
-                    <th>TMA (m)</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in last_4 %}
-                <tr>
-                    <td>{{ p.created_at|date:"H:i" }}</td>
-                    <td class="{% if p.status == 'Bahaya' %}tma-danger{% else %}tma-value{% endif %}">{{ p.tma_predicted|floatformat:3 }}</td>
-                    <td>
-                        <span class="badge {% if p.status == 'Bahaya' %}badge-bahaya{% else %}badge-normal{% endif %}">
-                            {{ p.status }}
-                        </span>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="3" style="text-align:center;color:var(--text-muted);">Belum ada data</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
 
-<!-- Inline Manual Prediction -->
-<div class="card" style="margin-top: 4px;">
-    <div class="card-title">✏️ Prediksi Manual</div>
-    <div class="grid-form-result">
-        <form method="POST" action="{% url 'index' %}">
-            {% csrf_token %}
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="id_waktu">{{ form.waktu.label }}</label>
-                    {{ form.waktu }}
+        <!-- Main Chart & Recent Table Module -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+            <!-- Chart Area (8 cols) -->
+            <div class="lg:col-span-8 flex flex-col gap-gutter">
+                <!-- Static Chart: Model Performance -->
+                <div class="bg-surface-container border border-outline-variant rounded p-md flex flex-col">
+                    <h3 class="font-h2 text-h2 text-on-surface mb-sm">📉 Kinerja Model (Evaluasi Data Uji)</h3>
+                    <div class="flex-grow relative min-h-[300px] mt-sm">
+                        <canvas id="staticChart"></canvas>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="id_curah_hujan">{{ form.curah_hujan_mm.label }}</label>
-                    {{ form.curah_hujan_mm }}
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="id_cuaca_kode">{{ form.cuaca_kode.label }}</label>
-                    {{ form.cuaca_kode }}
-                </div>
-                <div class="form-group">
-                    <label for="id_jam_kode">{{ form.jam_kode.label }}</label>
-                    {{ form.jam_kode }}
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="id_smd_kanan">{{ form.smd_kanan_q_ls.label }}</label>
-                    {{ form.smd_kanan_q_ls }}
-                </div>
-                <div class="form-group">
-                    <label for="id_smd_kiri">{{ form.smd_kiri_q_ls.label }}</label>
-                    {{ form.smd_kiri_q_ls }}
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary" style="margin-top:8px;">🔮 Prediksi Sekarang</button>
-        </form>
 
-        <!-- Result -->
-        <div class="result-card {% if result_status == 'Bahaya' %}bahaya{% elif result_status == 'Normal' %}normal{% endif %}">
-            <div class="result-label">Hasil Prediksi</div>
-            {% if result %}
-                <div class="result-value">{{ result }}<span class="result-unit">m</span></div>
-                <div class="result-badge">
-                    <span class="badge {% if result_status == 'Bahaya' %}badge-bahaya{% else %}badge-normal{% endif %}">
-                        {{ result_status }}
-                    </span>
+                <!-- Dynamic Chart: Real-time User Predictions -->
+                <div class="bg-surface-container border border-outline-variant rounded p-md flex flex-col">
+                    <h3 class="font-h2 text-h2 text-on-surface mb-sm">📈 Tren Prediksi TMA (Real-time)</h3>
+                    <div class="flex-grow relative min-h-[300px] mt-sm">
+                        <canvas id="tmaChart"></canvas>
+                    </div>
                 </div>
-            {% else %}
-                <div style="color:var(--text-muted);font-size:13px;">Masukkan data untuk melihat prediksi</div>
-            {% endif %}
+            </div>
+
+            <!-- Recent Table Area (4 cols) -->
+            <div class="lg:col-span-4 bg-surface-container border border-outline-variant rounded p-md flex flex-col">
+                <h3 class="font-h2 text-h2 text-on-surface mb-sm">Log Terbaru</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-surface border-b border-outline-variant font-label-caps text-label-caps text-on-surface-variant">
+                                <th class="py-2 px-3">Waktu</th>
+                                <th class="py-2 px-3">TMA (m)</th>
+                                <th class="py-2 px-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="font-data-mono text-data-mono">
+                            {% for p in last_4 %}
+                            <tr class="border-b border-outline-variant/50 {% if p.status == 'Bahaya' %}bg-error-container/10{% endif %}">
+                                <td class="py-3 px-3 text-on-surface">{{ p.created_at|date:"H:i" }}</td>
+                                <td class="py-3 px-3 {% if p.status == 'Bahaya' %}font-bold text-error{% else %}text-on-surface{% endif %}">{{ p.tma_predicted|floatformat:3 }}</td>
+                                <td class="py-3 px-3">
+                                    {% if p.status == 'Bahaya' %}
+                                    <span class="px-2 py-1 bg-[#dc3545] text-white rounded text-xs font-bold pulse-bahaya uppercase tracking-widest">BAHAYA</span>
+                                    {% else %}
+                                    <span class="px-2 py-1 bg-secondary-container/20 text-secondary border border-secondary/50 rounded text-xs font-bold uppercase tracking-widest">NORMAL</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center py-4 text-on-surface-variant">Belum ada data</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 text-right">
+                    <a href="{% url 'history' %}" class="text-primary hover:text-primary-fixed-dim text-sm font-medium">Lihat Semua Log &rarr;</a>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Data for Static Model Performance Chart
+const staticLabels = {{ static_chart_labels|safe }};
+const staticActuals = {{ static_chart_actuals|safe }};
+const staticPredicteds = {{ static_chart_predicteds|safe }};
+
+// Data for Real-time Chart
 const ctx = document.getElementById('tmaChart').getContext('2d');
 const labels = {{ chart_labels|safe }};
 const data = {{ chart_data|safe }};
-const threshold = {{ threshold }};
+const threshold = {{ threshold|default:"88.3794" }};
+
+if (document.getElementById('staticChart')) {
+    const staticCtx = document.getElementById('staticChart').getContext('2d');
+    new Chart(staticCtx, {
+        type: 'line',
+        data: {
+            labels: staticLabels,
+            datasets: [
+                {
+                    label: 'TMA Prediksi',
+                    data: staticPredicteds,
+                    borderColor: '#4a7cff',
+                    backgroundColor: 'rgba(74, 124, 255, 0.08)',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                },
+                {
+                    label: 'TMA Aktual',
+                    data: staticActuals,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                    borderDash: [5, 5]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: { labels: { color: '#8b91a8', font: { size: 11, family: 'Space Grotesk' } } },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#5a6078', font: { size: 10, family: 'Space Grotesk' }, maxTicksLimit: 10 },
+                    grid: { color: 'rgba(37,42,58,0.5)' },
+                    title: { display: true, text: 'Waktu', color: '#5a6078', font: { size: 10, family: 'Space Grotesk' } }
+                },
+                y: {
+                    ticks: { color: '#5a6078', font: { size: 10, family: 'Space Grotesk' } },
+                    grid: { color: 'rgba(37,42,58,0.5)' }
+                }
+            }
+        }
+    });
+}
 
 new Chart(ctx, {
     type: 'line',
@@ -148,12 +183,12 @@ new Chart(ctx, {
                 borderWidth: 2,
             },
             {
-                label: 'Threshold Bahaya (' + threshold.toFixed(3) + 'm)',
+                label: 'Threshold Bahaya (' + parseFloat(threshold).toFixed(3) + 'm)',
                 data: Array(labels.length).fill(threshold),
                 borderColor: '#ef4444',
-                borderDash: [6, 4],
-                borderWidth: 1.5,
+                borderDash: [5, 5],
                 pointRadius: 0,
+                borderWidth: 2,
                 fill: false,
             }
         ]
@@ -163,21 +198,22 @@ new Chart(ctx, {
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                labels: { color: '#8b91a8', font: { size: 11 } }
+                labels: { color: '#8b91a8', font: { size: 11, family: 'Space Grotesk' } }
             }
         },
         scales: {
             x: {
-                ticks: { color: '#5a6078', font: { size: 10 }, maxTicksLimit: 10 },
-                grid: { color: 'rgba(37,42,58,0.5)' },
-                title: { display: true, text: 'T-50 INTERVALS', color: '#5a6078', font: { size: 10 } }
+                ticks: { color: '#5a6078', font: { size: 10, family: 'Space Grotesk' } },
+                grid: { color: 'rgba(37,42,58,0.5)' }
             },
             y: {
-                ticks: { color: '#5a6078', font: { size: 10 } },
-                grid: { color: 'rgba(37,42,58,0.5)' }
+                ticks: { color: '#5a6078', font: { size: 10, family: 'Space Grotesk' } },
+                grid: { color: 'rgba(37,42,58,0.5)' },
+                beginAtZero: false
             }
         }
     }
 });
 </script>
+<script src="{% static 'js/index.js' %}"></script>
 {% endblock %}
