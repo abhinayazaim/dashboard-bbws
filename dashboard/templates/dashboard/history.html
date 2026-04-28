@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}History - Bajulmati{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+    <div class="page-header">
+        <h2>Riwayat Prediksi</h2>
+        <p>Log historis data telemetri dan hasil prediksi TMA.</p>
+    </div>
+    <div class="export-bar">
+        <a href="{% url 'export_csv' %}?date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}" class="btn btn-outline">⬇️ Export CSV</a>
+        <a href="{% url 'export_pdf' %}?date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}" class="btn btn-outline">📄 Export PDF</a>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="GET" action="{% url 'history' %}">
+<div class="filter-bar">
+    <label>Rentang Waktu</label>
+    <input type="date" name="date_from" value="{{ date_from }}" class="form-input" placeholder="Dari">
+    <span style="color:var(--text-muted);">-</span>
+    <input type="date" name="date_to" value="{{ date_to }}" class="form-input" placeholder="Sampai">
+    <label style="margin-left:12px;">Status</label>
+    <select name="status" class="form-input" style="min-width:140px;">
+        <option value="">Semua Status</option>
+        <option value="Normal" {% if status_filter == 'Normal' %}selected{% endif %}>Normal</option>
+        <option value="Bahaya" {% if status_filter == 'Bahaya' %}selected{% endif %}>Bahaya</option>
+    </select>
+    <input type="text" name="q" value="{{ search_query }}" class="form-input search-input" placeholder="🔍 Cari ID atau catatan...">
+    <button type="submit" class="btn btn-primary" style="padding:8px 16px;">Filter</button>
+</div>
+</form>
+
+<!-- Data Table -->
+<div class="card" style="padding:0;overflow:hidden;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Waktu Prediksi</th>
+                <th>TMA (m)</th>
+                <th>Curah Hujan (mm)</th>
+                <th>Debit (L/s)</th>
+                <th>Status</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in page_obj %}
+            <tr>
+                <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+                <td>{{ p.created_at|date:"Y-m-d H:i:s" }}</td>
+                <td class="{% if p.status == 'Bahaya' %}tma-danger{% else %}tma-value{% endif %}">{{ p.tma_predicted|floatformat:2 }}</td>
+                <td>{{ p.curah_hujan_mm|floatformat:1 }}</td>
+                <td>{{ p.smd_kanan_q_ls|floatformat:0 }}</td>
+                <td>
+                    <span class="badge {% if p.status == 'Bahaya' %}badge-bahaya{% elif p.status == 'Normal' %}badge-normal{% else %}badge-pending{% endif %}">
+                        {{ p.status }}
+                    </span>
+                </td>
+                <td><span class="action-link" title="Detail">👁️</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted);">Belum ada data prediksi.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="pagination-bar">
+    <span>Menampilkan {{ page_obj.start_index }}-{{ page_obj.end_index }} dari {{ total_count }} data</span>
+    <div class="pagination-pages">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}&q={{ search_query }}" class="page-btn">&lt;</a>
+        {% else %}
+            <span class="page-btn disabled">&lt;</span>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <span class="page-btn active">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}&q={{ search_query }}" class="page-btn">{{ num }}</a>
+            {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                <a href="?page={{ num }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}&q={{ search_query }}" class="page-btn">{{ num }}</a>
+            {% elif num == 2 or num == page_obj.paginator.num_pages|add:'-1' %}
+                <span class="page-btn disabled">...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&date_from={{ date_from }}&date_to={{ date_to }}&status={{ status_filter }}&q={{ search_query }}" class="page-btn">&gt;</a>
+        {% else %}
+            <span class="page-btn disabled">&gt;</span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

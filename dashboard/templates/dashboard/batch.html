@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Batch Upload - Bajulmati{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px;">
+    <h2>Upload Batch Data</h2>
+    <p>Unggah file CSV atau Excel untuk prediksi massal.</p>
+</div>
+
+<form method="POST" enctype="multipart/form-data" action="{% url 'batch_predict' %}" id="batchForm">
+    {% csrf_token %}
+    <!-- Upload Zone -->
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('id_csv_file').click();">
+        <div class="upload-icon">☁️</div>
+        <h3>Tarik & Lepas File di Sini</h3>
+        <p>Supported formats: .csv, .xlsx</p>
+        <button type="button" class="btn btn-outline" onclick="event.stopPropagation(); document.getElementById('id_csv_file').click();">📁 Browse Files</button>
+        <input type="file" id="id_csv_file" name="csv_file" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleFileSelect(this)">
+    </div>
+
+    <!-- Preview (hidden initially) -->
+    <div class="card preview-section" id="previewSection" style="display:none;">
+        <div class="preview-header">
+            <div class="card-title" style="margin-bottom:0;">📋 Preview Data</div>
+            <span class="file-badge" id="fileName"></span>
+        </div>
+        <table class="data-table" id="previewTable">
+            <thead id="previewHead"></thead>
+            <tbody id="previewBody"></tbody>
+        </table>
+        <div class="preview-footer">
+            <span id="rowCount"></span>
+            <span class="validation-ok" id="validationMsg">✅ Data validation passed</span>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="action-bar" id="actionBar" style="display:none;">
+        <button type="button" class="btn btn-outline" onclick="resetUpload()">Batal</button>
+        <button type="submit" class="btn btn-primary">📈 Mulai Prediksi</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const uploadZone = document.getElementById('uploadZone');
+
+// Drag & drop events
+['dragenter', 'dragover'].forEach(e => {
+    uploadZone.addEventListener(e, (ev) => { ev.preventDefault(); uploadZone.classList.add('dragover'); });
+});
+['dragleave', 'drop'].forEach(e => {
+    uploadZone.addEventListener(e, (ev) => { ev.preventDefault(); uploadZone.classList.remove('dragover'); });
+});
+uploadZone.addEventListener('drop', (ev) => {
+    const files = ev.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('id_csv_file').files = files;
+        handleFileSelect(document.getElementById('id_csv_file'));
+    }
+});
+
+function handleFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('previewSection').style.display = 'block';
+    document.getElementById('actionBar').style.display = 'flex';
+    uploadZone.style.display = 'none';
+
+    // CSV preview
+    if (file.name.endsWith('.csv')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const lines = e.target.result.split('\n').filter(l => l.trim());
+            const headers = lines[0].split(',');
+            const headRow = '<tr>' + headers.map(h => '<th>' + h.trim() + '</th>').join('') + '</tr>';
+            document.getElementById('previewHead').innerHTML = headRow;
+
+            let bodyHTML = '';
+            const previewCount = Math.min(lines.length - 1, 4);
+            for (let i = 1; i <= previewCount; i++) {
+                const cols = lines[i].split(',');
+                bodyHTML += '<tr>' + cols.map(c => '<td>' + c.trim() + '</td>').join('') + '</tr>';
+            }
+            document.getElementById('previewBody').innerHTML = bodyHTML;
+            document.getElementById('rowCount').textContent = 'Showing ' + previewCount + ' of ' + (lines.length - 1) + ' rows';
+        };
+        reader.readAsText(file);
+    } else {
+        document.getElementById('previewHead').innerHTML = '<tr><th>File Excel terdeteksi - preview tidak tersedia</th></tr>';
+        document.getElementById('previewBody').innerHTML = '';
+        document.getElementById('rowCount').textContent = file.name;
+    }
+}
+
+function resetUpload() {
+    document.getElementById('id_csv_file').value = '';
+    document.getElementById('previewSection').style.display = 'none';
+    document.getElementById('actionBar').style.display = 'none';
+    uploadZone.style.display = 'block';
+}
+</script>
+{% endblock %}

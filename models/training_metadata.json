@@ -1,0 +1,46 @@
+{
+  "look_back": 90,
+  "n_features": 11,
+  "feature_cols": [
+    "curah_hujan_mm",
+    "cuaca_kode",
+    "smd_kanan_q_ls",
+    "smd_kiri_q_ls",
+    "tma_lag1",
+    "tma_lag2",
+    "tma_lag3",
+    "delta_tma",
+    "tma_rolling_mean_3",
+    "jam_kode"
+  ],
+  "all_cols": [
+    "tma_m",
+    "curah_hujan_mm",
+    "cuaca_kode",
+    "smd_kanan_q_ls",
+    "smd_kiri_q_ls",
+    "tma_lag1",
+    "tma_lag2",
+    "tma_lag3",
+    "delta_tma",
+    "tma_rolling_mean_3",
+    "jam_kode"
+  ],
+  "target_col": "tma_m",
+  "threshold": 88.3794,
+  "train_end_date": "2023-11-02",
+  "val_end_date": "2024-12-30",
+  "metrics": {
+    "test_rmse": 1.2755,
+    "test_mae": 1.2415,
+    "test_mape": 1.4274,
+    "test_r2": -0.3445,
+    "test_nse": -0.3445,
+    "test_recall": 0.0,
+    "test_f1": 0.0
+  },
+  "trained_at": "2026-04-26 15:55:27",
+  "epochs_trained": 100,
+  "dataset_rows": 8558,
+  "batch_size": 64
+}

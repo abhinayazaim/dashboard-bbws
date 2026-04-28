@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Model Info - Bajulmati{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px;">
+    <h2>Informasi & Transparansi Model</h2>
+    <p>Detailed insights into the predictive architecture and performance metrics of the Bajulmati Dam hydrological model.</p>
+</div>
+
+<div class="grid-2">
+    <!-- Attention Weights -->
+    <div class="card">
+        <div class="card-title">📊 Feature-Wise Attention Weights</div>
+        {% for feat in feature_data %}
+        <div class="feature-bar-row">
+            <span class="feature-bar-label">{{ feat.name }}</span>
+            <div class="feature-bar-track">
+                <div class="feature-bar-fill {% if feat.is_lag %}lag{% else %}external{% endif %}"
+                     style="width: {{ feat.bar_width }}%"></div>
+            </div>
+            <span class="feature-bar-value">{{ feat.weight }}</span>
+        </div>
+        {% endfor %}
+        <div style="margin-top:16px;display:flex;gap:20px;font-size:11px;color:var(--text-muted);">
+            <span>🔴 Lag Features</span>
+            <span>🔵 External Features</span>
+        </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="card">
+        <div class="card-title">⚙️ Metrik Evaluasi Model</div>
+        <div class="metric-row">
+            <span class="metric-label">RMSE</span>
+            <span class="metric-value">{{ metrics.test_rmse|default:"N/A" }} m</span>
+        </div>
+        <div class="metric-row">
+            <span class="metric-label">MAE</span>
+            <span class="metric-value">{{ metrics.test_mae|default:"N/A" }} m</span>
+        </div>
+        <div class="metric-row">
+            <span class="metric-label">R-Squared (R²)</span>
+            <span class="metric-value">{{ metrics.test_r2|default:"N/A" }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="metric-label">MAPE</span>
+            <span class="metric-value">{{ metrics.test_mape|default:"N/A" }}%</span>
+        </div>
+        <div class="metric-row">
+            <span class="metric-label">Last Training</span>
+            <span class="metric-value">{{ model_info.trained_at|default:"N/A" }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="metric-label">Epochs</span>
+            <span class="metric-value">{{ model_info.epochs_trained|default:"N/A" }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="metric-label">Dataset Rows</span>
+            <span class="metric-value">{{ model_info.dataset_rows|default:"N/A" }}</span>
+        </div>
+        <div class="metric-row">
+            <span class="metric-label">Look-back Window</span>
+            <span class="metric-value">{{ model_info.look_back|default:"N/A" }} steps</span>
+        </div>
+        <div class="metric-row">
+            <span class="metric-label">Threshold Bahaya</span>
+            <span class="metric-value">{{ model_info.threshold|default:"N/A" }} m</span>
+        </div>
+    </div>
+</div>
+
+<!-- Architecture Description -->
+<div class="card" style="margin-top: 4px;">
+    <div class="card-title">⚙️ Arsitektur AI</div>
+    <div class="arch-section">
+        <p>
+            Sistem ini mengimplementasikan arsitektur hybrid <strong>LSTM-Transformer</strong>
+            (Long Short-Term Memory). LSTM dikonfigurasi untuk menangkap dependensi temporal
+            sekuensial jangka panjang dari fluktuasi TMA historis, sementara lapisan Transformer
+            menggunakan mekanisme <em>self-attention</em> untuk secara dinamis menimbang pengaruh
+            anomali cuaca eksternal (curah hujan tinggi tiba-tiba) secara real-time.
+        </p>
+        <br>
+        <p>
+            Konfigurasi ini memastikan prediksi yang sangat responsif terhadap lonjakan debit
+            air ekstrem yang tidak terprediksi secara linier. Model dilatih menggunakan
+            <strong>{{ model_info.dataset_rows|default:"8558" }}</strong> baris data historis
+            dengan window size <strong>{{ model_info.look_back|default:"90" }}</strong> time steps
+            dan batch size <strong>{{ model_info.batch_size|default:"64" }}</strong>.
+        </p>
+    </div>
+</div>
+
+{% if not is_loaded %}
+<div class="alert alert-error" style="margin-top: 16px;">
+    ⚠️ Model belum dimuat. Pastikan file model tersedia di folder <code>models/</code>.
+</div>
+{% endif %}
+{% endblock %}

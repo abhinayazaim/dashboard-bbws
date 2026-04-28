@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Manual Input - Bajulmati{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px;">
+    <h2>Prediksi Manual</h2>
+    <p>Input data telemetri secara manual untuk mendapatkan prediksi TMA.</p>
+</div>
+
+<div class="grid-form-result">
+    <div class="card">
+        <form method="POST" action="{% url 'predict' %}">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="id_waktu">{{ form.waktu.label }}</label>
+                    {{ form.waktu }}
+                </div>
+                <div class="form-group">
+                    <label for="id_curah_hujan">{{ form.curah_hujan_mm.label }}</label>
+                    {{ form.curah_hujan_mm }}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="id_cuaca_kode">{{ form.cuaca_kode.label }}</label>
+                    {{ form.cuaca_kode }}
+                </div>
+                <div class="form-group">
+                    <label for="id_jam_kode">{{ form.jam_kode.label }}</label>
+                    {{ form.jam_kode }}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="id_smd_kanan">{{ form.smd_kanan_q_ls.label }}</label>
+                    {{ form.smd_kanan_q_ls }}
+                </div>
+                <div class="form-group">
+                    <label for="id_smd_kiri">{{ form.smd_kiri_q_ls.label }}</label>
+                    {{ form.smd_kiri_q_ls }}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:12px;">🔮 Prediksi Sekarang</button>
+        </form>
+    </div>
+
+    <div class="result-card {% if result_status == 'Bahaya' %}bahaya{% elif result_status == 'Normal' %}normal{% endif %}">
+        <div class="result-label">Hasil Prediksi</div>
+        {% if result %}
+            <div class="result-value">{{ result }}<span class="result-unit">m</span></div>
+            <div class="result-badge">
+                <span class="badge {% if result_status == 'Bahaya' %}badge-bahaya{% else %}badge-normal{% endif %}">
+                    {{ result_status }}
+                </span>
+            </div>
+        {% else %}
+            <div style="color:var(--text-muted);font-size:13px;">Masukkan data untuk melihat prediksi</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

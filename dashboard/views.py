@@ -1,0 +1,390 @@
+import json
+import pandas as pd
+from datetime import datetime, timedelta
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse, HttpResponse
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.utils import timezone
+from django.db.models import Q
+
+from .models import PredictionRecord, BatchSession
+from .forms import ManualPredictionForm, BatchUploadForm
+from .ml_engine import MLEngine
+from .export_utils import export_history_to_csv, export_history_to_pdf
+
+
+def _compute_lag_features(last_records):
+    """
+    Auto-compute lag1/lag2/lag3, delta_tma, and rolling_mean from the last 3 predictions.
+    Returns dict of computed features.
+    """
+    tma_values = []
+    for r in last_records:
+        tma_values.append(r.tma_predicted)
+
+    # Pad if not enough history
+    while len(tma_values) < 3:
+        tma_values.insert(0, tma_values[0] if tma_values else 86.0)
+
+    lag1 = tma_values[-1]  # most recent
+    lag2 = tma_values[-2]
+    lag3 = tma_values[-3]
+    delta_tma = lag1 - lag2
+    rolling_mean = sum(tma_values[-3:]) / 3.0
+
+    return {
+        'tma_lag1': lag1,
+        'tma_lag2': lag2,
+        'tma_lag3': lag3,
+        'delta_tma': delta_tma,
+        'tma_rolling_mean_3': rolling_mean,
+    }
+
+
+def index_view(request):
+    """Dashboard home page."""
+    engine = MLEngine()
+
+    # Stats
+    total_predictions = PredictionRecord.objects.count()
+    today = timezone.now().date()
+    today_predictions = PredictionRecord.objects.filter(created_at__date=today).count()
+    danger_count = PredictionRecord.objects.filter(status='Bahaya').count()
+
+    # Last 50 for chart
+    last_50 = list(PredictionRecord.objects.order_by('-created_at')[:50])
+    last_50.reverse()
+
+    chart_labels = []
+    chart_data = []
+    for p in last_50:
+        chart_labels.append(p.created_at.strftime('%H:%M'))
+        chart_data.append(round(p.tma_predicted, 3))
+
+    # Last 4 for log table
+    last_4 = PredictionRecord.objects.order_by('-created_at')[:4]
+
+    # Model info
+    threshold = engine.get_threshold()
+    metrics = engine.get_model_metrics()
+
+    # Manual prediction form
+    form = ManualPredictionForm()
+    result = None
+    result_status = None
+
+    if request.method == 'POST':
+        form = ManualPredictionForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+
+            # Compute lag features from history
+            last_records = list(PredictionRecord.objects.order_by('-created_at')[:3])
+            lag_features = _compute_lag_features(last_records)
+
+            feature_dict = {
+                'curah_hujan_mm': cd['curah_hujan_mm'],
+                'cuaca_kode': float(cd['cuaca_kode']),
+                'smd_kanan_q_ls': cd['smd_kanan_q_ls'],
+                'smd_kiri_q_ls': cd['smd_kiri_q_ls'],
+                'jam_kode': float(cd['jam_kode']),
+                **lag_features,
+            }
+
+            tma_pred, pred_status, th = engine.predict_single(feature_dict)
+
+            # Save to DB
+            PredictionRecord.objects.create(
+                waktu=cd['waktu'],
+                curah_hujan_mm=cd['curah_hujan_mm'],
+                cuaca_kode=float(cd['cuaca_kode']),
+                smd_kanan_q_ls=cd['smd_kanan_q_ls'],
+                smd_kiri_q_ls=cd['smd_kiri_q_ls'],
+                jam_kode=float(cd['jam_kode']),
+                tma_lag1=lag_features['tma_lag1'],
+                tma_lag2=lag_features['tma_lag2'],
+                tma_lag3=lag_features['tma_lag3'],
+                delta_tma=lag_features['delta_tma'],
+                tma_rolling_mean_3=lag_features['tma_rolling_mean_3'],
+                tma_predicted=tma_pred,
+                status=pred_status,
+                threshold_used=th,
+                source='Manual',
+            )
+
+            result = round(tma_pred, 3)
+            result_status = pred_status
+            messages.success(request, 'Prediksi berhasil dilakukan.')
+
+    context = {
+        'total_predictions': total_predictions,
+        'today_predictions': today_predictions,
+        'danger_count': danger_count,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+        'threshold': threshold,
+        'last_4': last_4,
+        'metrics': metrics,
+        'is_loaded': engine.is_loaded,
+        'form': form,
+        'result': result,
+        'result_status': result_status,
+    }
+    return render(request, 'dashboard/index.html', context)
+
+
+def predict_view(request):
+    """Dedicated manual prediction page."""
+    engine = MLEngine()
+    form = ManualPredictionForm()
+    result = None
+    result_status = None
+
+    if request.method == 'POST':
+        form = ManualPredictionForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            last_records = list(PredictionRecord.objects.order_by('-created_at')[:3])
+            lag_features = _compute_lag_features(last_records)
+
+            feature_dict = {
+                'curah_hujan_mm': cd['curah_hujan_mm'],
+                'cuaca_kode': float(cd['cuaca_kode']),
+                'smd_kanan_q_ls': cd['smd_kanan_q_ls'],
+                'smd_kiri_q_ls': cd['smd_kiri_q_ls'],
+                'jam_kode': float(cd['jam_kode']),
+                **lag_features,
+            }
+
+            tma_pred, pred_status, th = engine.predict_single(feature_dict)
+
+            PredictionRecord.objects.create(
+                waktu=cd['waktu'],
+                curah_hujan_mm=cd['curah_hujan_mm'],
+                cuaca_kode=float(cd['cuaca_kode']),
+                smd_kanan_q_ls=cd['smd_kanan_q_ls'],
+                smd_kiri_q_ls=cd['smd_kiri_q_ls'],
+                jam_kode=float(cd['jam_kode']),
+                tma_lag1=lag_features['tma_lag1'],
+                tma_lag2=lag_features['tma_lag2'],
+                tma_lag3=lag_features['tma_lag3'],
+                delta_tma=lag_features['delta_tma'],
+                tma_rolling_mean_3=lag_features['tma_rolling_mean_3'],
+                tma_predicted=tma_pred,
+                status=pred_status,
+                threshold_used=th,
+                source='Manual',
+            )
+
+            result = round(tma_pred, 3)
+            result_status = pred_status
+            messages.success(request, 'Prediksi berhasil dilakukan.')
+
+    context = {
+        'form': form,
+        'result': result,
+        'result_status': result_status,
+        'threshold': engine.get_threshold(),
+    }
+    return render(request, 'dashboard/predict.html', context)
+
+
+def batch_predict_view(request):
+    """Batch upload and prediction page."""
+    if request.method == 'POST':
+        form = BatchUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            uploaded_file = request.FILES['csv_file']
+            file_name = uploaded_file.name
+
+            try:
+                # Read CSV or Excel
+                if file_name.endswith('.xlsx') or file_name.endswith('.xls'):
+                    df = pd.read_excel(uploaded_file)
+                else:
+                    df = pd.read_csv(uploaded_file)
+
+                engine = MLEngine()
+
+                # Check for required feature columns
+                missing_cols = [
+                    col for col in engine.feature_cols if col not in df.columns
+                ]
+                if missing_cols:
+                    messages.error(
+                        request,
+                        f"Kolom tidak lengkap. Kurang: {', '.join(missing_cols)}"
+                    )
+                    return render(request, 'dashboard/batch.html', {'form': form})
+
+                # Run batch prediction
+                result_df = engine.predict_batch(df)
+
+                # Create batch session
+                session = BatchSession.objects.create(
+                    file_name=file_name,
+                    total_rows=len(result_df),
+                )
+
+                # Bulk create prediction records
+                records = []
+                danger_count = 0
+                normal_count = 0
+
+                for _, row in result_df.iterrows():
+                    pred_status = row.get('status', 'Pending')
+                    if pred_status == 'Bahaya':
+                        danger_count += 1
+                    elif pred_status == 'Normal':
+                        normal_count += 1
+
+                    records.append(PredictionRecord(
+                        curah_hujan_mm=row.get('curah_hujan_mm', 0),
+                        cuaca_kode=row.get('cuaca_kode', 0),
+                        smd_kanan_q_ls=row.get('smd_kanan_q_ls', 0),
+                        smd_kiri_q_ls=row.get('smd_kiri_q_ls', 0),
+                        tma_lag1=row.get('tma_lag1', 0),
+                        tma_lag2=row.get('tma_lag2', 0),
+                        tma_lag3=row.get('tma_lag3', 0),
+                        delta_tma=row.get('delta_tma', 0),
+                        tma_rolling_mean_3=row.get('tma_rolling_mean_3', 0),
+                        jam_kode=row.get('jam_kode', 0),
+                        tma_predicted=row.get('tma_predicted', 0.0),
+                        status=pred_status,
+                        threshold_used=engine.get_threshold(),
+                        source='Batch',
+                        batch_session=session,
+                    ))
+
+                PredictionRecord.objects.bulk_create(records)
+
+                session.danger_count = danger_count
+                session.normal_count = normal_count
+                session.save()
+
+                messages.success(
+                    request,
+                    f'Batch berhasil diproses: {normal_count} Normal, {danger_count} Bahaya.'
+                )
+                return redirect('history')
+
+            except Exception as e:
+                messages.error(request, f"Error: {str(e)}")
+    else:
+        form = BatchUploadForm()
+
+    return render(request, 'dashboard/batch.html', {'form': form})
+
+
+def history_view(request):
+    """Prediction history page with filters."""
+    query = PredictionRecord.objects.all()
+
+    # Date range filter
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('q', '')
+
+    if date_from:
+        query = query.filter(created_at__date__gte=date_from)
+    if date_to:
+        query = query.filter(created_at__date__lte=date_to)
+    if status_filter:
+        query = query.filter(status=status_filter)
+    if search_query:
+        query = query.filter(
+            Q(notes__icontains=search_query) |
+            Q(source__icontains=search_query)
+        )
+
+    total_count = query.count()
+    paginator = Paginator(query, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'total_count': total_count,
+        'date_from': date_from,
+        'date_to': date_to,
+        'status_filter': status_filter,
+        'search_query': search_query,
+    }
+    return render(request, 'dashboard/history.html', context)
+
+
+def model_info_view(request):
+    """Model information and transparency page."""
+    engine = MLEngine()
+
+    # Feature names and attention weights
+    all_cols = engine.all_cols if engine.all_cols else []
+    features = all_cols
+    weights = engine.attention_weights.tolist() if engine.attention_weights is not None else []
+
+    # Normalize weights for display (0-1 scale relative to max)
+    if weights:
+        max_w = max(weights) if max(weights) > 0 else 1
+        weights_normalized = [round(w / max_w * 100, 1) for w in weights]
+    else:
+        weights_normalized = []
+
+    # Feature display names
+    feature_display_names = {
+        'tma_m': 'TMA (Target)',
+        'curah_hujan_mm': 'Curah Hujan',
+        'cuaca_kode': 'Kode Cuaca',
+        'smd_kanan_q_ls': 'Debit Kanan',
+        'smd_kiri_q_ls': 'Debit Kiri',
+        'tma_lag1': 'TMA (Lag 1)',
+        'tma_lag2': 'TMA (Lag 2)',
+        'tma_lag3': 'TMA (Lag 3)',
+        'delta_tma': 'Delta TMA',
+        'tma_rolling_mean_3': 'Rolling Mean',
+        'jam_kode': 'Jam Kode',
+    }
+
+    feature_data = []
+    for i, feat in enumerate(features):
+        is_lag = any(x in feat for x in ['lag', 'jam', 'rolling', 'delta', 'tma_m'])
+        feature_data.append({
+            'name': feature_display_names.get(feat, feat),
+            'raw_name': feat,
+            'weight': round(weights[i], 4) if i < len(weights) else 0,
+            'bar_width': weights_normalized[i] if i < len(weights_normalized) else 0,
+            'is_lag': is_lag,
+        })
+
+    metrics = engine.get_model_metrics()
+    model_info = engine.get_model_info()
+
+    context = {
+        'feature_data': feature_data,
+        'metrics': metrics,
+        'model_info': model_info,
+        'is_loaded': engine.is_loaded,
+    }
+    return render(request, 'dashboard/model_info.html', context)
+
+
+def system_status_api(request):
+    """API endpoint for system status badge."""
+    engine = MLEngine()
+    return JsonResponse({
+        'status': 'operational' if engine.is_loaded else 'offline',
+        'model_loaded': engine.is_loaded,
+        'threshold': engine.get_threshold(),
+    })
+
+
+def export_csv_view(request):
+    """Export filtered history to CSV."""
+    return export_history_to_csv(request)
+
+
+def export_pdf_view(request):
+    """Export filtered history to PDF."""
+    return export_history_to_pdf(request)

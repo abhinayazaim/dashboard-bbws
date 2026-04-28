@@ -1,0 +1,76 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bajulmati Dam Hydrological Prediction Suite">
+    <title>{% block title %}Bajulmati Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1>BAJULMATI DAM</h1>
+            <p>Hydrological Suite</p>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{% url 'index' %}" class="nav-item {% if active_page == 'dashboard' or not active_page %}active{% endif %}" id="nav-dashboard">
+                <span class="icon">📊</span> Dashboard
+            </a>
+            <a href="{% url 'predict' %}" class="nav-item {% if active_page == 'predict' %}active{% endif %}" id="nav-predict">
+                <span class="icon">✏️</span> Manual Input
+            </a>
+            <a href="{% url 'batch_predict' %}" class="nav-item {% if active_page == 'batch' %}active{% endif %}" id="nav-batch">
+                <span class="icon">📁</span> Batch Upload
+            </a>
+            <a href="{% url 'history' %}" class="nav-item {% if active_page == 'history' %}active{% endif %}" id="nav-history">
+                <span class="icon">🕐</span> History
+            </a>
+            <a href="{% url 'model_info' %}" class="nav-item {% if active_page == 'model_info' %}active{% endif %}" id="nav-model">
+                <span class="icon">📈</span> Model Info
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="#" class="nav-item" id="nav-status">
+                <span class="icon">⚙️</span> System Status
+            </a>
+        </div>
+    </aside>
+
+    <!-- Top Bar -->
+    <header class="topbar">
+        <span class="topbar-title">Hydrological Prediction Suite</span>
+        <div class="topbar-right">
+            <div class="topbar-icons">
+                <span title="Notifications">🔔</span>
+                <span title="Settings">⚙️</span>
+                <span title="Help">❓</span>
+            </div>
+            <span class="status-badge operational" id="system-status-badge">
+                <span class="dot"></span>
+                System: Operational
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {% if message.tags == 'success' %}✅{% else %}⚠️{% endif %}
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
