@@ -36,9 +36,46 @@
     }
 </style>
 <div class="p-gutter md:p-lg space-y-lg max-w-[1920px] mx-auto w-full">
-    <!-- Section 1: Beranda -->
-    <section class="space-y-md">
-        <h2 class="font-h1 text-h1 text-on-surface">Beranda</h2>
+    <!-- Section 1: Beranda Hero with Slideshow -->
+    <section class="relative h-[280px] rounded-2xl overflow-hidden flex flex-col justify-end p-lg border border-outline-variant/20 shadow-2xl group">
+        <!-- Slideshow Container -->
+        <div class="absolute inset-0 z-0">
+            <div class="slideshow-image absolute inset-0 opacity-0 transition-opacity duration-1000 ease-in-out" style="background-image: url('{% static 'bajulmati.jpg' %}'); background-size: cover; background-position: center;"></div>
+            <div class="slideshow-image absolute inset-0 opacity-0 transition-opacity duration-1000 ease-in-out" style="background-image: url('{% static 'bajulmati 2.jpg' %}'); background-size: cover; background-position: center;"></div>
+            <div class="slideshow-image absolute inset-0 opacity-0 transition-opacity duration-1000 ease-in-out" style="background-image: url('{% static 'bajulmati 4.webp' %}'); background-size: cover; background-position: center;"></div>
+            
+            <!-- Glassmorphism Gradient Overlay -->
+            <div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/60 to-transparent z-10"></div>
+            <div class="absolute inset-0 bg-black/20 z-10"></div>
+        </div>
+        
+        <div class="relative z-20">
+            <span class="inline-block px-3 py-1 bg-primary/20 border border-primary/30 backdrop-blur-md rounded-full text-[10px] font-bold text-primary-fixed-dim uppercase tracking-[0.2em] mb-3">Monitoring Dashboard</span>
+            <h2 class="font-display-lg text-display-lg text-white drop-shadow-lg">Beranda</h2>
+            <p class="text-on-surface-variant max-w-2xl mt-2 line-clamp-2">Pantau kondisi Tinggi Muka Air (TMA) Bendungan Bajulmati secara real-time dengan dukungan prediksi kecerdasan buatan.</p>
+        </div>
+    </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.slideshow-image');
+            let currentSlide = 0;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.style.opacity = (i === index) ? '1' : '0';
+                });
+            }
+
+            if (slides.length > 0) {
+                showSlide(0);
+                setInterval(() => {
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    showSlide(currentSlide);
+                }, 5000); // Switch every 5 seconds
+            }
+        });
+    </script>
         
         <!-- KPI Cards Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">

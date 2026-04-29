@@ -453,3 +453,14 @@ def historical_data_view(request):
         'historical_data': data,
     }
     return render(request, 'dashboard/historical_data.html', context)
+
+def reset_data_view(request):
+    """Deletes all prediction records and batch sessions."""
+    if request.method == 'POST':
+        # Delete all records
+        PredictionRecord.objects.all().delete()
+        BatchSession.objects.all().delete()
+        
+        messages.success(request, "Seluruh riwayat data telah berhasil direset ke nol.")
+        return redirect('index')
+    return redirect('index')
