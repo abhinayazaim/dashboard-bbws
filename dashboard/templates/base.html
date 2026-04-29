@@ -187,7 +187,7 @@
         </div>
         
         <div class="flex flex-col space-y-1 mt-auto pb-4 px-2">
-            <a class="text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-colors duration-150 rounded" href="#">
+            <a id="btn-status-sistem" class="text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-colors duration-150 rounded cursor-pointer">
                 <span class="material-symbols-outlined text-xl">sensors</span>
                 <span>Status Sistem</span>
             </a>
@@ -201,15 +201,15 @@
     <!-- TopNavBar -->
     <header class="fixed top-0 right-0 left-64 flex justify-between items-center px-8 h-16 z-30 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800">
         <h2 class="font-h2 text-h2 text-on-surface font-semibold tracking-tight hidden sm:block">Sistem Prediksi Hidrologi</h2>
-        <div class="flex items-center gap-4">
-            <button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors text-on-surface-variant relative group">
+        <div class="flex items-center gap-4 relative">
+            <button id="btn-notifications" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors text-on-surface-variant relative group">
                 <span class="material-symbols-outlined text-xl">notifications</span>
                 <span class="absolute top-2 right-2 w-2 h-2 bg-[#dc3545] rounded-full"></span>
             </button>
-            <button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors text-on-surface-variant">
+            <button id="btn-settings" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors text-on-surface-variant">
                 <span class="material-symbols-outlined text-xl">settings</span>
             </button>
-            <button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors text-on-surface-variant">
+            <button id="btn-help" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors text-on-surface-variant">
                 <span class="material-symbols-outlined text-xl">help</span>
             </button>
             <div class="h-8 w-px bg-outline-variant/30 hidden sm:block"></div>
@@ -228,8 +228,196 @@
         </div>
     </main>
 
+    <!-- MODALS -->
+    <!-- Status Sistem Modal -->
+    <div id="modal-status" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-md w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-h2 text-h2 text-on-surface">Status Sistem</h3>
+                <button class="close-modal text-on-surface-variant hover:text-white"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="space-y-4 font-body-md text-on-surface-variant">
+                <div class="flex justify-between items-center p-3 bg-surface rounded border border-outline-variant/30">
+                    <span>Inference Engine</span>
+                    <span class="text-secondary font-bold">Online</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-surface rounded border border-outline-variant/30">
+                    <span>Database</span>
+                    <span class="text-secondary font-bold">Connected</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-surface rounded border border-outline-variant/30">
+                    <span>Model Version</span>
+                    <span class="text-primary font-bold">LSTM-Attn v2.0</span>
+                </div>
+            </div>
+            <div class="mt-6 text-right">
+                <button class="close-modal px-4 py-2 bg-primary-container text-on-primary-container rounded hover:bg-primary hover:text-on-primary transition-colors">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Dropdown -->
+    <div id="dropdown-notifications" class="fixed top-16 right-8 z-50 w-80 bg-surface-container border border-outline-variant rounded-xl shadow-2xl hidden opacity-0 transition-opacity duration-200">
+        <div class="p-4 border-b border-outline-variant/50 flex justify-between items-center">
+            <h3 class="font-h2 text-h2 text-on-surface">Notifikasi</h3>
+            <span class="text-xs text-primary cursor-pointer hover:underline">Tandai sudah dibaca</span>
+        </div>
+        <div class="max-h-64 overflow-y-auto">
+            <div class="p-4 border-b border-outline-variant/30 hover:bg-surface-container-highest cursor-pointer">
+                <div class="flex gap-3">
+                    <span class="material-symbols-outlined text-error">warning</span>
+                    <div>
+                        <p class="text-sm text-on-surface">Peringatan: Potensi TMA Ekstrem</p>
+                        <p class="text-xs text-on-surface-variant mt-1">Prediksi menunjukkan lonjakan TMA dalam 24 jam ke depan.</p>
+                        <p class="text-xs text-outline mt-2">10 menit yang lalu</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 hover:bg-surface-container-highest cursor-pointer">
+                <div class="flex gap-3">
+                    <span class="material-symbols-outlined text-primary">update</span>
+                    <div>
+                        <p class="text-sm text-on-surface">Pembaruan Model Selesai</p>
+                        <p class="text-xs text-on-surface-variant mt-1">LSTM-Attn v2.0 telah dimuat dan siap digunakan.</p>
+                        <p class="text-xs text-outline mt-2">1 jam yang lalu</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="modal-settings" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-md w-full max-w-lg shadow-2xl transform scale-95 transition-transform duration-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-h2 text-h2 text-on-surface">Pengaturan</h3>
+                <button class="close-modal text-on-surface-variant hover:text-white"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="space-y-4 font-body-md text-on-surface-variant">
+                <div class="flex justify-between items-center border-b border-outline-variant/30 pb-4">
+                    <div>
+                        <p class="text-on-surface font-medium">Notifikasi Bahaya</p>
+                        <p class="text-xs text-outline">Terima peringatan saat TMA melewati batas</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                </div>
+                <div class="flex justify-between items-center pb-2">
+                    <div>
+                        <p class="text-on-surface font-medium">Ambang Batas Siaga (m)</p>
+                        <p class="text-xs text-outline">Batas TMA sebelum memicu notifikasi</p>
+                    </div>
+                    <input type="number" value="88.3" class="bg-surface border border-outline-variant text-on-surface rounded px-3 py-1 w-24 text-center">
+                </div>
+            </div>
+            <div class="mt-6 text-right">
+                <button class="close-modal px-4 py-2 bg-primary-container text-on-primary-container rounded hover:bg-primary hover:text-on-primary transition-colors">Simpan & Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="modal-help" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-md w-full max-w-lg shadow-2xl transform scale-95 transition-transform duration-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-h2 text-h2 text-on-surface flex items-center gap-2"><span class="material-symbols-outlined text-tertiary">help</span> Pusat Bantuan</h3>
+                <button class="close-modal text-on-surface-variant hover:text-white"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div class="space-y-4 font-body-md text-on-surface-variant text-sm">
+                <p>Sistem Prediksi Hidrologi Bendungan Bajulmati dirancang untuk memberikan estimasi Tinggi Muka Air (TMA) menggunakan model AI hybrid LSTM-Attention.</p>
+                <div class="bg-surface p-3 rounded border border-outline-variant/30">
+                    <p class="font-bold text-on-surface mb-1">Cara Penggunaan:</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Gunakan menu <strong>Input Manual</strong> untuk memprediksi data tunggal secara real-time.</li>
+                        <li>Gunakan menu <strong>Unggah Batch</strong> untuk memprediksi banyak data sekaligus menggunakan file CSV.</li>
+                        <li>Amati <strong>Kinerja Model</strong> di Dashboard utama untuk melihat komparasi data prediksi dan aktual.</li>
+                    </ul>
+                </div>
+                <p class="text-xs text-outline text-center pt-2 border-t border-outline-variant/30">Versi Sistem: 1.0.0 | Engine: Keras/TensorFlow</p>
+            </div>
+            <div class="mt-6 text-right">
+                <button class="close-modal px-4 py-2 bg-primary-container text-on-primary-container rounded hover:bg-primary hover:text-on-primary transition-colors">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+
     <script src="{% static 'js/base.js' %}"></script>
     {% block scripts %}
     {% endblock %}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Helpers
+            const openModal = (id) => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.classList.remove('hidden');
+                    // Trigger reflow
+                    void el.offsetWidth;
+                    el.classList.remove('opacity-0');
+                    const inner = el.querySelector('div');
+                    if (inner && inner.classList.contains('scale-95')) {
+                        inner.classList.remove('scale-95');
+                    }
+                }
+            };
+            
+            const closeModal = (modal) => {
+                modal.classList.add('opacity-0');
+                const inner = modal.querySelector('div');
+                if (inner && !inner.classList.contains('fixed')) {
+                    inner.classList.add('scale-95');
+                }
+                setTimeout(() => modal.classList.add('hidden'), 200);
+            };
+
+            const toggleDropdown = (id) => {
+                const el = document.getElementById(id);
+                if(el) {
+                    if (el.classList.contains('hidden')) {
+                        el.classList.remove('hidden');
+                        void el.offsetWidth;
+                        el.classList.remove('opacity-0');
+                    } else {
+                        el.classList.add('opacity-0');
+                        setTimeout(() => el.classList.add('hidden'), 200);
+                    }
+                }
+            };
+
+            // Bindings
+            document.getElementById('btn-status-sistem')?.addEventListener('click', (e) => { e.preventDefault(); openModal('modal-status'); });
+            document.getElementById('btn-settings')?.addEventListener('click', () => openModal('modal-settings'));
+            document.getElementById('btn-help')?.addEventListener('click', () => openModal('modal-help'));
+            document.getElementById('btn-notifications')?.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown('dropdown-notifications'); });
+
+            // Close buttons
+            document.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const modal = e.target.closest('.fixed.inset-0');
+                    if (modal) closeModal(modal);
+                });
+            });
+
+            // Close modal on click outside
+            document.querySelectorAll('.fixed.inset-0').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if(e.target === modal) closeModal(modal);
+                });
+            });
+
+            // Close dropdown on click outside
+            document.addEventListener('click', (e) => {
+                const drop = document.getElementById('dropdown-notifications');
+                const btn = document.getElementById('btn-notifications');
+                if (drop && !drop.classList.contains('hidden') && !drop.contains(e.target) && !btn.contains(e.target)) {
+                    drop.classList.add('opacity-0');
+                    setTimeout(() => drop.classList.add('hidden'), 200);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
