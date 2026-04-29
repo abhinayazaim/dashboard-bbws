@@ -1,75 +1,74 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Clickable Rows
-    const rows = document.querySelectorAll('.clickable-row');
-    rows.forEach(row => {
-        row.addEventListener('click', function(e) {
-            // Prevent if clicking on something that shouldn't trigger row click
-            if (e.target.tagName.toLowerCase() === 'a' || e.target.tagName.toLowerCase() === 'button') {
-                return;
+    // Select form and hidden inputs
+    const filterForm = document.getElementById('filter-form');
+    const dateFromInput = document.getElementById('id_date_from');
+    const dateToInput = document.getElementById('id_date_to');
+
+    if (!filterForm) return;
+
+    // 1. Handle Filter Buttons
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.getAttribute('data-filter');
+            const today = new Date();
+            
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            if (type === 'all') {
+                dateFromInput.value = '';
+                dateToInput.value = '';
+            } else if (type === 'today') {
+                const d = formatDate(today);
+                dateFromInput.value = d;
+                dateToInput.value = d;
+            } else if (type === '7days') {
+                const from = new Date();
+                from.setDate(today.getDate() - 7);
+                dateFromInput.value = formatDate(from);
+                dateToInput.value = formatDate(today);
+            } else if (type === '30days') {
+                const from = new Date();
+                from.setDate(today.getDate() - 30);
+                dateFromInput.value = formatDate(from);
+                dateToInput.value = formatDate(today);
             }
             
-            // Highlight row temporarily to show interaction
-            const originalBg = this.style.backgroundColor;
-            this.style.backgroundColor = 'rgba(74, 124, 255, 0.1)';
-            
-            setTimeout(() => {
-                this.style.backgroundColor = originalBg;
-                
-                // Show detail mockup (could be replaced with actual modal/navigation)
-                const id = this.getAttribute('data-id') || (forloop_counter + 1);
-                const tma = this.querySelector('td:nth-child(4)').innerText;
-                const status = this.querySelector('td:nth-child(7)').innerText.trim();
-                alert(`Detail Prediksi\nTMA: ${tma}\nStatus: ${status}\n\nFitur detail lengkap akan segera hadir!`);
-            }, 200);
-        });
-
-        // Hover effect
-        row.addEventListener('mouseenter', function() {
-            this.style.backgroundColor = 'var(--bg-lighter)';
-        });
-        row.addEventListener('mouseleave', function() {
-            this.style.backgroundColor = '';
+            filterForm.submit();
         });
     });
 
-    // 2. Export Confirmation
-    const exportBtns = document.querySelectorAll('.export-btn');
-    exportBtns.forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            const type = this.getAttribute('data-type');
-            const confirmMsg = `Anda yakin ingin mengunduh riwayat data dalam format ${type}?`;
-            if (!confirm(confirmMsg)) {
-                e.preventDefault();
+    // 2. Highlight Active Button
+    const urlParams = new URLSearchParams(window.location.search);
+    const dateFrom = urlParams.get('date_from');
+    const dateTo = urlParams.get('date_to');
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    function setBtnActive(type) {
+        filterBtns.forEach(b => {
+            if (b.getAttribute('data-filter') === type) {
+                b.classList.remove('bg-[#121212]', 'text-on-surface');
+                b.classList.add('bg-primary-container', 'text-white');
+            } else {
+                b.classList.add('bg-[#121212]', 'text-on-surface');
+                b.classList.remove('bg-primary-container', 'text-white');
             }
         });
-    });
+    }
 
-    // 3. Quick Date Filters
-    const quickBtns = document.querySelectorAll('.quick-filter-btn');
-    const dateFrom = document.getElementById('date_from');
-    const dateTo = document.getElementById('date_to');
-    
-    if (quickBtns.length > 0 && dateFrom && dateTo) {
-        quickBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const days = parseInt(this.getAttribute('data-days'), 10);
-                const today = new Date();
-                
-                // Format YYYY-MM-DD
-                const toDateString = today.toISOString().split('T')[0];
-                dateTo.value = toDateString;
-                
-                if (days === 0) {
-                    dateFrom.value = toDateString;
-                } else {
-                    const fromDate = new Date();
-                    fromDate.setDate(today.getDate() - days);
-                    dateFrom.value = fromDate.toISOString().split('T')[0];
-                }
-                
-                // Auto submit form
-                this.closest('form').submit();
-            });
-        });
+    if (!dateFrom) {
+        setBtnActive('all');
+    } else if (dateFrom === todayStr) {
+        setBtnActive('today');
+    } else {
+        // Simple logic for 7/30 highlight
+        const diff = Math.ceil((new Date() - new Date(dateFrom)) / (1000 * 60 * 60 * 24));
+        if (diff >= 6 && diff <= 8) setBtnActive('7days');
+        else if (diff >= 28 && diff <= 32) setBtnActive('30days');
     }
 });

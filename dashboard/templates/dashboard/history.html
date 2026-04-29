@@ -22,25 +22,28 @@
 </div>
 
 <!-- Filter Bar -->
-<div class="bg-[#1e1e1e] border border-[#333333] rounded p-sm mb-lg flex flex-wrap gap-md items-center">
-    <!-- Date Range Filter -->
+<form method="GET" action="{% url 'history' %}" class="bg-[#1e1e1e] border border-[#333333] rounded p-sm mb-lg flex flex-wrap gap-md items-center" id="filter-form">
+    <!-- Date Range Filter (Hidden inputs for buttons to set) -->
+    <input type="hidden" name="date_from" id="id_date_from" value="{{ date_from }}">
+    <input type="hidden" name="date_to" id="id_date_to" value="{{ date_to }}">
+    
     <div class="flex items-center gap-xs">
         <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Rentang Waktu</label>
         <div class="flex items-center gap-2">
-            <button class="bg-[#121212] border border-[#333333] text-on-surface text-xs px-3 py-1.5 rounded hover:bg-[#2a2a2a] filter-btn" data-filter="today">Hari Ini</button>
-            <button class="bg-[#121212] border border-[#333333] text-on-surface text-xs px-3 py-1.5 rounded hover:bg-[#2a2a2a] filter-btn" data-filter="7days">7 Hari</button>
-            <button class="bg-[#121212] border border-[#333333] text-on-surface text-xs px-3 py-1.5 rounded hover:bg-[#2a2a2a] filter-btn" data-filter="30days">30 Hari</button>
-            <button class="bg-primary-container text-white text-xs px-3 py-1.5 rounded filter-btn" data-filter="all">Semua</button>
+            <button type="button" class="bg-[#121212] border border-[#333333] text-on-surface text-xs px-3 py-1.5 rounded hover:bg-[#2a2a2a] filter-btn" data-filter="today">Hari Ini</button>
+            <button type="button" class="bg-[#121212] border border-[#333333] text-on-surface text-xs px-3 py-1.5 rounded hover:bg-[#2a2a2a] filter-btn" data-filter="7days">7 Hari</button>
+            <button type="button" class="bg-[#121212] border border-[#333333] text-on-surface text-xs px-3 py-1.5 rounded hover:bg-[#2a2a2a] filter-btn" data-filter="30days">30 Hari</button>
+            <button type="button" class="bg-primary-container text-white text-xs px-3 py-1.5 rounded filter-btn" data-filter="all">Semua</button>
         </div>
     </div>
     
     <!-- Status Filter -->
     <div class="flex items-center gap-xs ml-auto">
         <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Status</label>
-        <select id="status-filter" class="bg-[#121212] border border-[#333333] text-on-surface font-body-sm text-body-sm rounded py-1.5 pl-3 pr-8 focus:ring-[#1F3864] focus:border-[#1F3864]">
-            <option value="all">Semua Status</option>
-            <option value="Normal">Normal</option>
-            <option value="Bahaya">Bahaya</option>
+        <select name="status" id="status-filter" class="bg-[#121212] border border-[#333333] text-on-surface font-body-sm text-body-sm rounded py-1.5 pl-3 pr-8 focus:ring-[#1F3864] focus:border-[#1F3864]" onchange="this.form.submit()">
+            <option value="all" {% if status_filter == 'all' or not status_filter %}selected{% endif %}>Semua Status</option>
+            <option value="Normal" {% if status_filter == 'Normal' %}selected{% endif %}>Normal</option>
+            <option value="Bahaya" {% if status_filter == 'Bahaya' %}selected{% endif %}>Bahaya</option>
         </select>
     </div>
     
@@ -48,10 +51,10 @@
     <div class="flex items-center">
         <div class="relative w-64">
             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-            <input type="text" id="search-input" class="w-full bg-[#121212] border border-[#333333] text-on-surface font-body-sm text-body-sm rounded py-1.5 pl-9 pr-3 focus:ring-[#1F3864] focus:border-[#1F3864] placeholder:text-on-surface-variant" placeholder="Cari ID sesi...">
+            <input type="text" name="q" id="search-input" value="{{ search_query }}" class="w-full bg-[#121212] border border-[#333333] text-on-surface font-body-sm text-body-sm rounded py-1.5 pl-9 pr-3 focus:ring-[#1F3864] focus:border-[#1F3864] placeholder:text-on-surface-variant" placeholder="Cari ID sesi...">
         </div>
     </div>
-</div>
+</form>
 
 <!-- Data Table -->
 <div class="bg-[#1e1e1e] border border-[#333333] rounded overflow-hidden">
@@ -137,5 +140,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/history.js' %}"></script>
+<script src="{% static 'js/history.js' %}?v=1.1"></script>
 {% endblock %}

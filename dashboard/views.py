@@ -323,17 +323,28 @@ def history_view(request):
     date_to = request.GET.get('date_to', '')
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('q', '')
-
+    
     if date_from:
-        query = query.filter(created_at__date__gte=date_from)
+        try:
+            from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+            query = query.filter(created_at__date__gte=from_date)
+        except ValueError:
+            pass
     if date_to:
-        query = query.filter(created_at__date__lte=date_to)
-    if status_filter:
+        try:
+            to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
+            query = query.filter(created_at__date__lte=to_date)
+        except ValueError:
+            pass
+            
+    if status_filter and status_filter != 'all':
         query = query.filter(status=status_filter)
+        
     if search_query:
         query = query.filter(
-            Q(notes__icontains=search_query) |
-            Q(source__icontains=search_query)
+            Q(batch_session__session_id__icontains=search_query) |
+            Q(source__icontains=search_query) |
+            Q(status__icontains=search_query)
         )
 
     total_count = query.count()
