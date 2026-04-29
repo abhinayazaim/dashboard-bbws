@@ -85,10 +85,10 @@ def index_view(request):
     if os.path.exists(static_results_path):
         with open(static_results_path, 'r') as f:
             static_data = json.load(f)
-            # Only send the last 100 points to keep UI clean
-            static_chart_labels = static_data.get('labels', [])[-100:]
-            static_chart_actuals = static_data.get('actuals', [])[-100:]
-            static_chart_predicteds = static_data.get('predicteds', [])[-100:]
+            # Send the entire dataset to the frontend so the slider can navigate 2018-2026
+            static_chart_labels = static_data.get('labels', [])
+            static_chart_actuals = static_data.get('actuals', [])
+            static_chart_predicteds = static_data.get('predicteds', [])
 
     if request.method == 'POST':
         form = ManualPredictionForm(request.POST)
@@ -337,10 +337,9 @@ def model_info_view(request):
     features = all_cols
     weights = engine.attention_weights.tolist() if engine.attention_weights is not None else []
 
-    # Normalize weights for display (0-1 scale relative to max)
+    # Convert weights to absolute percentage (0-100% since they sum to 1.0)
     if weights:
-        max_w = max(weights) if max(weights) > 0 else 1
-        weights_normalized = [round(w / max_w * 100, 1) for w in weights]
+        weights_normalized = [round(w * 100, 1) for w in weights]
     else:
         weights_normalized = []
 

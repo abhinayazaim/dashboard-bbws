@@ -70,7 +70,7 @@
             <div class="lg:col-span-8 flex flex-col gap-gutter">
                 <!-- Static Chart: Model Performance -->
                 <div class="bg-surface-container border border-outline-variant rounded p-md flex flex-col">
-                    <h3 class="font-h2 text-h2 text-on-surface mb-sm">📉 Kinerja Model (Evaluasi Data Uji)</h3>
+                    <h3 class="font-h2 text-h2 text-on-surface mb-sm">Kinerja Model (Evaluasi Data Uji)</h3>
                     <div class="flex-grow relative min-h-[300px] mt-sm">
                         <canvas id="staticChart"></canvas>
                     </div>
@@ -86,7 +86,7 @@
 
                 <!-- Dynamic Chart: Real-time User Predictions -->
                 <div class="bg-surface-container border border-outline-variant rounded p-md flex flex-col">
-                    <h3 class="font-h2 text-h2 text-on-surface mb-sm">📈 Tren Prediksi TMA (Real-time)</h3>
+                    <h3 class="font-h2 text-h2 text-on-surface mb-sm">Tren Prediksi TMA (Real-time)</h3>
                     <div class="flex-grow relative min-h-[300px] mt-sm">
                         <canvas id="tmaChart"></canvas>
                     </div>
@@ -236,22 +236,23 @@ if (document.getElementById('staticChart')) {
                     fill: true,
                     tension: 0.4,
                     pointRadius: 0,
-                    pointHoverRadius: 6,
                     pointHoverBackgroundColor: '#4a7cff',
-                    borderWidth: 2,
+                    borderWidth: 1.5,
+                    order: 2, // Draw underneath
                 },
                 {
                     label: 'TMA Aktual',
                     data: staticActuals.slice(initialStart, initialEnd + 1),
-                    borderColor: '#10b981',
+                    borderColor: '#ff9800', // Bright orange
                     backgroundColor: 'transparent',
                     fill: false,
                     tension: 0.4,
                     pointRadius: 0,
                     pointHoverRadius: 6,
-                    pointHoverBackgroundColor: '#10b981',
-                    borderWidth: 2,
-                    borderDash: [5, 5]
+                    pointHoverBackgroundColor: '#ff9800',
+                    borderWidth: 1.5, 
+                    borderDash: [4, 4], // Dashed to distinguish
+                    order: 1, // Draw on top
                 }
             ]
         },
