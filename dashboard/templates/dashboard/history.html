@@ -60,6 +60,7 @@
             <thead class="bg-[#1e1e1e] border-b border-[#333333]">
                 <tr>
                     <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest w-12 text-center">No</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Waktu Observasi</th>
                     <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Waktu Prediksi</th>
                     <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">TMA (m)</th>
                     <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">Curah Hujan (mm)</th>
@@ -72,7 +73,8 @@
                 {% for p in page_obj %}
                 <tr class="border-b border-[#333333] hover:bg-[#2a2a2a] transition-colors history-row" data-status="{{ p.status }}" data-date="{{ p.created_at|date:'Y-m-d' }}" data-session="{{ p.batch_session.session_id|default:'' }}">
                     <td class="px-sm py-3 text-center text-on-surface-variant">{{ forloop.counter0|add:page_obj.start_index }}</td>
-                    <td class="px-sm py-3">{{ p.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td class="px-sm py-3">{% if p.waktu %}{{ p.waktu|date:"Y-m-d H:i:s" }}{% else %}<span class="text-outline">—</span>{% endif %}</td>
+                    <td class="px-sm py-3 text-xs text-on-surface-variant">{{ p.created_at|date:"Y-m-d H:i:s" }}</td>
                     <td class="px-sm py-3 text-right {% if p.status == 'Bahaya' %}text-error font-bold{% endif %}">{{ p.tma_predicted|floatformat:3 }}</td>
                     <td class="px-sm py-3 text-right">{{ p.curah_hujan_mm|floatformat:1 }}</td>
                     <td class="px-sm py-3 text-right">{{ p.smd_kanan_q_ls|floatformat:1 }}</td>

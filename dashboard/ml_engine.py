@@ -408,11 +408,111 @@ class MLEngine:
             traceback.print_exc()
             return 0.0, "Error", threshold
 
+    def _preprocess_raw_df(self, df):
+        """
+        Preprocess a potentially unclean/raw DataFrame before prediction.
+        Handles: missing values, column name variants, categorical encoding,
+        lag feature recomputation, and derived features.
+        """
+        df = df.copy()
+
+        # ── 1. Standardize column names (strip whitespace, lowercase) ───────────
+        df.columns = [c.strip() for c in df.columns]
+
+        # ── 2. Map alternative column names ─────────────────────────────────────
+        alias_map = {
+            'curah_hujan_mm': ['curah_hujan_mm', 'curah_hujan', 'rain', 'hujan', 'ch', 'rainfall'],
+            'cuaca_kode':     ['cuaca_kode', 'cuaca', 'weather', 'weather_code'],
+            'smd_kanan_q_ls': ['smd_kanan_q_ls', 'smd_kanan', 'debit_kanan', 'debit kanan'],
+            'smd_kiri_q_ls':  ['smd_kiri_q_ls', 'smd_kiri', 'debit_kiri', 'debit kiri'],
+            'tma_m':          ['tma_m', 'tma', 'water_level', 'tinggi muka air'],
+            'jam_kode':       ['jam_kode', 'jam', 'hour', 'hour_code'],
+        }
+        col_lower = {c.lower(): c for c in df.columns}
+        for target, alts in alias_map.items():
+            if target not in df.columns:
+                for alt in alts:
+                    match = col_lower.get(alt.lower())
+                    if match:
+                        df[target] = df[match]
+                        break
+
+        # ── 3. Encode categorical weather text → numeric kode ──────────────────
+        if 'cuaca' in df.columns and 'cuaca_kode' not in df.columns:
+            cuaca_map = {
+                'cerah': 1, 'berawan': 2, 'mendung': 3, 'hujan': 4,
+                'clear': 1, 'cloudy': 2, 'overcast': 3, 'rain': 4,
+                'ringan': 2, 'lebat': 4,
+            }
+            df['cuaca_kode'] = df['cuaca'].astype(str).str.lower().str.strip().map(cuaca_map).fillna(1)
+        elif 'cuaca_kode' in df.columns:
+            # If it's still text (e.g., "Cerah"), encode it
+            if df['cuaca_kode'].dtype == object:
+                cuaca_map = {'cerah': 1, 'berawan': 2, 'mendung': 3, 'hujan': 4}
+                df['cuaca_kode'] = df['cuaca_kode'].astype(str).str.lower().str.strip().map(cuaca_map).fillna(1)
+
+        # Also handle standalone text 'cuaca' column
+        if 'cuaca' in df.columns and df['cuaca'].dtype == object:
+            cuaca_map = {'cerah': 1, 'berawan': 2, 'mendung': 3, 'hujan': 4}
+            df['cuaca_kode'] = df['cuaca'].astype(str).str.lower().str.strip().map(cuaca_map).fillna(df.get('cuaca_kode', pd.Series(1, index=df.index)))
+
+        # ── 4. Fill basic numeric columns ─────────────────────────────────────
+        for col in ['curah_hujan_mm', 'smd_kanan_q_ls', 'smd_kiri_q_ls', 'jam_kode', 'cuaca_kode']:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(float)
+            else:
+                df[col] = 0.0
+
+        # ── 5. Handle tma_m — forward-fill then back-fill (water level shouldn't be zero) ──
+        if 'tma_m' in df.columns:
+            df['tma_m'] = pd.to_numeric(df['tma_m'], errors='coerce')
+            df['tma_m'] = df['tma_m'].ffill().bfill().fillna(self.last_tma_m)
+        else:
+            df['tma_m'] = self.last_tma_m
+
+        # ── 6. Recompute lag features from tma_m if missing or all NaN ─────────
+        def col_is_empty(c):
+            return c not in df.columns or df[c].isna().all()
+
+        if col_is_empty('tma_lag1'):
+            df['tma_lag1'] = df['tma_m'].shift(1).ffill().bfill()
+        else:
+            df['tma_lag1'] = pd.to_numeric(df['tma_lag1'], errors='coerce').ffill().bfill().fillna(df['tma_m'])
+
+        if col_is_empty('tma_lag2'):
+            df['tma_lag2'] = df['tma_m'].shift(2).ffill().bfill()
+        else:
+            df['tma_lag2'] = pd.to_numeric(df['tma_lag2'], errors='coerce').ffill().bfill().fillna(df['tma_m'])
+
+        if col_is_empty('tma_lag3'):
+            df['tma_lag3'] = df['tma_m'].shift(3).ffill().bfill()
+        else:
+            df['tma_lag3'] = pd.to_numeric(df['tma_lag3'], errors='coerce').ffill().bfill().fillna(df['tma_m'])
+
+        if col_is_empty('delta_tma'):
+            df['delta_tma'] = df['tma_m'].diff().fillna(0)
+        else:
+            df['delta_tma'] = pd.to_numeric(df['delta_tma'], errors='coerce').fillna(0)
+
+        if col_is_empty('tma_rolling_mean_3'):
+            df['tma_rolling_mean_3'] = df['tma_m'].rolling(3, min_periods=1).mean()
+        else:
+            df['tma_rolling_mean_3'] = pd.to_numeric(df['tma_rolling_mean_3'], errors='coerce').ffill().bfill().fillna(df['tma_m'])
+
+        # ── 7. V2 derived features ───────────────────────────────────────────
+        df['curah_hujan_log'] = np.log1p(df['curah_hujan_mm'].fillna(0))
+        df['smd_avg'] = (df['smd_kanan_q_ls'].fillna(0) + df['smd_kiri_q_ls'].fillna(0)) / 2.0
+
+        # ── 8. delta_tma_lag1 ───────────────────────────────────────────────
+        if 'delta_tma_lag1' not in df.columns:
+            df['delta_tma_lag1'] = df['delta_tma'].shift(1).fillna(0)
+
+        return df
+
     def predict_batch(self, df):
         """
         Predict TMA for a batch DataFrame.
-        
-        The DataFrame must contain columns matching self.feature_cols.
+        Handles raw/unclean data via _preprocess_raw_df().
         Returns the DataFrame with added 'tma_predicted' and 'status' columns.
         """
         threshold = self.get_threshold()
@@ -427,11 +527,8 @@ class MLEngine:
         try:
             look_back = self.get_look_back()
 
-            # Pre-compute V2 transformations if necessary
-            if 'curah_hujan_mm' in df.columns and 'curah_hujan_log' not in df.columns:
-                df['curah_hujan_log'] = np.log1p(df['curah_hujan_mm'].fillna(0).astype(float))
-            if 'smd_kanan_q_ls' in df.columns and 'smd_kiri_q_ls' in df.columns and 'smd_avg' not in df.columns:
-                df['smd_avg'] = (df['smd_kanan_q_ls'].fillna(0).astype(float) + df['smd_kiri_q_ls'].fillna(0).astype(float)) / 2.0
+            # ── Preprocess (handles nulls, column aliases, lag recomputation) ─
+            df = self._preprocess_raw_df(df)
 
             # Build all_cols DataFrame: prepend target column (zeros as placeholder)
             all_data = pd.DataFrame()
@@ -442,7 +539,11 @@ class MLEngine:
                 if col in df.columns:
                     all_data[col] = df[col].values
                 else:
+                    print(f"Warning: feature col '{col}' missing after preprocessing, using 0.")
                     all_data[col] = 0.0
+
+            # Final safety net: replace any remaining NaN with 0
+            all_data = all_data.fillna(0)
 
             # Scale with scaler_all (expects all_cols order)
             data_scaled_all = self.scaler_all.transform(all_data[self.all_cols].values)
@@ -487,16 +588,15 @@ class MLEngine:
             for i, (idx, delta_pred) in enumerate(zip(valid_indices, preds_value)):
                 if 0 <= idx < len(df):
                     # V2 Reconstruction: tma_pred(t) = tma_actual(t-1) + delta_pred
-                    # Get tma_actual(t-1). If idx==0, use self.last_tma_m (or from df if available)
                     if idx > 0 and 'tma_m' in df.columns:
-                        prev_actual = float(df.loc[df.index[idx-1], 'tma_m'])
+                        prev_actual = float(df.iloc[idx - 1]['tma_m'])
                     else:
                         prev_actual = self.last_tma_m
 
                     pred_val = prev_actual + delta_pred
                     
-                    df.loc[df.index[idx], 'tma_predicted'] = float(pred_val)
-                    df.loc[df.index[idx], 'status'] = (
+                    df.iloc[idx, df.columns.get_loc('tma_predicted')] = float(pred_val)
+                    df.iloc[idx, df.columns.get_loc('status')] = (
                         "Bahaya" if pred_val >= threshold else "Normal"
                     )
 

@@ -108,7 +108,7 @@
                         <tbody class="font-data-mono text-data-mono">
                             {% for p in last_4 %}
                             <tr class="border-b border-outline-variant/50 {% if p.status == 'Bahaya' %}bg-error-container/10{% endif %}">
-                                <td class="py-3 px-3 text-on-surface">{{ p.created_at|date:"H:i" }}</td>
+                                <td class="py-3 px-3 text-on-surface">{{ p.created_at|date:"d M H:i" }}</td>
                                 <td class="py-3 px-3 {% if p.status == 'Bahaya' %}font-bold text-error{% else %}text-on-surface{% endif %}">{{ p.tma_predicted|floatformat:3 }}</td>
                                 <td class="py-3 px-3">
                                     {% if p.status == 'Bahaya' %}
@@ -146,7 +146,7 @@ const data = {{ chart_data|safe }};
 const threshold = {{ threshold|default:"88.3794" }};
 
 // Global Chart configurations
-Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+Chart.defaults.font.family = "'Roboto', sans-serif";
 Chart.defaults.color = '#8b91a8';
 Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.05)';
 
@@ -167,7 +167,7 @@ const commonOptions = {
                 boxWidth: 8,
                 boxHeight: 8,
                 padding: 20,
-                font: { size: 12, weight: '500' }
+                font: { size: 14, weight: '500', family: 'Roboto' }
             }
         },
         tooltip: {
@@ -176,11 +176,11 @@ const commonOptions = {
             bodyColor: '#e3e2e6',
             borderColor: 'rgba(255, 255, 255, 0.1)',
             borderWidth: 1,
-            padding: 12,
-            boxPadding: 6,
+            padding: 14,
+            boxPadding: 8,
             usePointStyle: true,
-            titleFont: { size: 13, weight: '600', family: 'Inter' },
-            bodyFont: { size: 12, family: 'Inter' },
+            titleFont: { size: 15, weight: '600', family: 'Roboto' },
+            bodyFont: { size: 14, family: 'Roboto' },
             cornerRadius: 8,
         }
     },
@@ -192,7 +192,7 @@ const commonOptions = {
             },
             ticks: {
                 maxTicksLimit: 10,
-                font: { size: 11 },
+                font: { size: 13, family: 'Roboto' },
                 color: '#5a6078'
             }
         },
@@ -203,7 +203,7 @@ const commonOptions = {
                 color: 'rgba(255, 255, 255, 0.03)'
             },
             ticks: {
-                font: { size: 11 },
+                font: { size: 13, family: 'Roboto' },
                 padding: 10,
                 color: '#5a6078'
             }

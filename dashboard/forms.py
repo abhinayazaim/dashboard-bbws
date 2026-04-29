@@ -78,7 +78,7 @@ class BatchUploadForm(forms.Form):
         label='Upload File',
         widget=forms.FileInput(attrs={
             'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
-            'accept': '.csv,.xlsx,.xls',
+            'accept': '.csv',
             'id': 'id_csv_file',
         })
     )

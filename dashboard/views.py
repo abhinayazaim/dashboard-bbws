@@ -60,7 +60,8 @@ def index_view(request):
     chart_labels = []
     chart_data = []
     for p in last_50:
-        chart_labels.append(p.created_at.strftime('%H:%M'))
+        # Show full date+time so the chart is not confusing when data spans multiple days
+        chart_labels.append(p.created_at.strftime('%d %b %H:%M'))
         chart_data.append(round(p.tma_predicted, 3))
 
     # Last 4 for log table
@@ -218,11 +219,12 @@ def batch_predict_view(request):
             file_name = uploaded_file.name
 
             try:
-                # Read CSV or Excel
-                if file_name.endswith('.xlsx') or file_name.endswith('.xls'):
-                    df = pd.read_excel(uploaded_file)
-                else:
-                    df = pd.read_csv(uploaded_file)
+                # Exclusively read CSV
+                try:
+                    df = pd.read_csv(uploaded_file, encoding='utf-8')
+                except UnicodeDecodeError:
+                    uploaded_file.seek(0)
+                    df = pd.read_csv(uploaded_file, encoding='latin1')
 
                 engine = MLEngine()
 
@@ -241,6 +243,15 @@ def batch_predict_view(request):
                 danger_count = 0
                 normal_count = 0
 
+                # Identify time column from original df BEFORE preprocessing
+                time_col = None
+                for col in ['datetime', 'waktu', 'date', 'tanggal', 'time', 'timestamp']:
+                    # Case-insensitive column match
+                    match = next((c for c in df.columns if c.strip().lower() == col), None)
+                    if match:
+                        time_col = match
+                        break
+
                 for _, row in result_df.iterrows():
                     pred_status = row.get('status', 'Pending')
                     if pred_status == 'Bahaya':
@@ -252,7 +263,20 @@ def batch_predict_view(request):
                     if pd.isna(pred_val):
                         pred_val = 0.0
 
+                    # Handle observation time from original uploaded data
+                    obs_time = None  # None = unknown, will display as "-" in table
+                    if time_col and time_col in result_df.columns:
+                        try:
+                            raw_t = row.get(time_col)
+                            if raw_t is not None and not (isinstance(raw_t, float) and pd.isna(raw_t)):
+                                parsed = pd.to_datetime(raw_t, errors='coerce')
+                                if not pd.isna(parsed):
+                                    obs_time = parsed.to_pydatetime()
+                        except Exception:
+                            pass
+
                     records.append(PredictionRecord(
+                        waktu=obs_time,
                         curah_hujan_mm=row.get('curah_hujan_mm', 0),
                         cuaca_kode=row.get('cuaca_kode', 0),
                         smd_kanan_q_ls=row.get('smd_kanan_q_ls', 0),

@@ -16,10 +16,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.style.backgroundColor = originalBg;
                 
                 // Show detail mockup (could be replaced with actual modal/navigation)
-                const id = this.getAttribute('data-id');
-                const tma = this.querySelector('td:nth-child(3)').innerText;
-                const status = this.querySelector('td:nth-child(6)').innerText.trim();
-                alert(`Detail Prediksi #${id}\nTMA: ${tma}\nStatus: ${status}\n\nFitur detail lengkap akan segera hadir!`);
+                const id = this.getAttribute('data-id') || (forloop_counter + 1);
+                const tma = this.querySelector('td:nth-child(4)').innerText;
+                const status = this.querySelector('td:nth-child(7)').innerText.trim();
+                alert(`Detail Prediksi\nTMA: ${tma}\nStatus: ${status}\n\nFitur detail lengkap akan segera hadir!`);
             }, 200);
         });
 
