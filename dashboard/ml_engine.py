@@ -133,8 +133,11 @@ class MLEngine:
             attention_weights_path = os.path.join(model_dir, 'attention_weights.npy')
             if os.path.exists(attention_weights_path):
                 self.attention_weights = np.load(attention_weights_path)
+            elif self.metadata and 'attention_weights' in self.metadata:
+                aw_dict = self.metadata['attention_weights']
+                self.attention_weights = [aw_dict.get(col, 0) for col in self.feature_cols]
             else:
-                self.attention_weights = np.ones(len(self.all_cols)) / len(self.all_cols)
+                self.attention_weights = np.ones(len(self.feature_cols)) / len(self.feature_cols)
 
             # Load seed history (pre-scaled sliding window for cold start)
             seed_path = os.path.join(model_dir, 'seed_history.npy')
@@ -143,6 +146,18 @@ class MLEngine:
                 print(f"Seed history loaded: shape {self.seed_history.shape}")
             else:
                 self.seed_history = None
+
+            # Get the last absolute TMA from the dataset to use for delta reconstruction
+            dataset_path = os.path.join(settings.BASE_DIR, 'Bajulmati_Dataset_2018_2026_Imputed.csv')
+            self.last_tma_m = 87.58 # Default
+            if os.path.exists(dataset_path):
+                try:
+                    df_temp = pd.read_csv(dataset_path)
+                    if not df_temp.empty and 'tma_m' in df_temp.columns:
+                        self.last_tma_m = float(df_temp.iloc[-1]['tma_m'])
+                        print(f"Loaded last TMA from dataset: {self.last_tma_m}")
+                except Exception as e:
+                    print(f"Failed to read dataset for last TMA: {e}")
 
             self.is_loaded = True
             print("ML Engine loaded successfully.")
@@ -180,9 +195,8 @@ class MLEngine:
                 layer_map[lc['name']] = lc
 
             # Reconstruct the architecture based on the saved config
-            # Input: (90, 11)
             look_back = self.get_look_back()
-            n_features = len(self.all_cols)
+            n_features = self.metadata.get('n_features', len(self.all_cols)) if self.metadata else len(self.all_cols)
             inp = Input(shape=(look_back, n_features), name='input_sequence')
 
             # LSTM 1: returns sequences, 128 units
@@ -308,10 +322,28 @@ class MLEngine:
         }
 
     def _build_all_cols_row(self, feature_dict, tma_value=0.0):
-        """Build a single row with all_cols order (tma_m first, then features)."""
-        row = [tma_value]  # tma_m placeholder
+        """Build a single row with all_cols order (tma_m/delta_tma first, then features)."""
+        row = [tma_value]  # Target placeholder
+        
+        # Pre-compute transformations for V2 model
+        curah_hujan_mm = float(feature_dict.get('curah_hujan_mm', 0.0))
+        smd_kanan = float(feature_dict.get('smd_kanan_q_ls', 0.0))
+        smd_kiri = float(feature_dict.get('smd_kiri_q_ls', 0.0))
+        
+        computed_features = {
+            'curah_hujan_mm': curah_hujan_mm,
+            'cuaca_kode': float(feature_dict.get('cuaca_kode', 0.0)),
+            'jam_kode': float(feature_dict.get('jam_kode', 0.0)),
+            'smd_kanan_q_ls': smd_kanan,
+            'smd_kiri_q_ls': smd_kiri,
+            # V2 Features
+            'curah_hujan_log': np.log1p(curah_hujan_mm),
+            'smd_avg': (smd_kanan + smd_kiri) / 2.0,
+            'delta_tma_lag1': 0.0 # Placeholder or fetch from history
+        }
+        
         for col in self.feature_cols:
-            row.append(float(feature_dict.get(col, 0.0)))
+            row.append(computed_features.get(col, 0.0))
         return row
 
     def predict_single(self, feature_dict):
@@ -336,23 +368,36 @@ class MLEngine:
             new_row_scaled = self.scaler_all.transform([new_row_values])[0]
 
             # Build the sliding window
+            # new_row_scaled has shape (6,). The features are from index 1 onwards.
+            new_features_scaled = new_row_scaled[1:]
+
             if self.seed_history is not None:
-                # Use seed history as base, append new row, take last look_back
-                window = np.vstack([self.seed_history, new_row_scaled.reshape(1, -1)])
+                # STEADY-STATE SIMULATION
+                # Apply the user's manual inputs across the entire seed history.
+                # seed_history columns: 0:curah_hujan_log, 1:cuaca_kode, 2:smd_avg, 3:delta_tma_lag1, 4:jam_kode
+                # We replace indices 0:3 (curah_hujan_log, cuaca_kode, smd_avg)
+                window = np.copy(self.seed_history)
+                window[:, 0:3] = new_features_scaled[0:3]
+                
+                # Append new row, take last look_back
+                window = np.vstack([window, new_features_scaled.reshape(1, -1)])
                 window = window[-look_back:]
             else:
                 # Repeat the new row look_back times (poor fallback)
-                window = np.tile(new_row_scaled, (look_back, 1))
+                window = np.tile(new_features_scaled, (look_back, 1))
 
             # Reshape for LSTM: (1, look_back, n_features)
             X = np.expand_dims(window, axis=0)
 
-            # Predict
+            # Predict (no need to slice X because window already has correct n_features)
             preds = self.model.predict(X, verbose=0)
             pred_scaled = preds[0] if isinstance(preds, list) else preds
 
-            # Inverse transform the target
-            pred_value = self.scaler_target.inverse_transform(pred_scaled)[0][0]
+            # Inverse transform the target (which is delta_tma)
+            delta_pred = self.scaler_target.inverse_transform(pred_scaled)[0][0]
+            
+            # Reconstruct absolute TMA
+            pred_value = self.last_tma_m + delta_pred
 
             status = "Bahaya" if pred_value >= threshold else "Normal"
             return float(pred_value), status, threshold
@@ -382,9 +427,17 @@ class MLEngine:
         try:
             look_back = self.get_look_back()
 
-            # Build all_cols DataFrame: prepend tma_m column (zeros as placeholder)
+            # Pre-compute V2 transformations if necessary
+            if 'curah_hujan_mm' in df.columns and 'curah_hujan_log' not in df.columns:
+                df['curah_hujan_log'] = np.log1p(df['curah_hujan_mm'].fillna(0).astype(float))
+            if 'smd_kanan_q_ls' in df.columns and 'smd_kiri_q_ls' in df.columns and 'smd_avg' not in df.columns:
+                df['smd_avg'] = (df['smd_kanan_q_ls'].fillna(0).astype(float) + df['smd_kiri_q_ls'].fillna(0).astype(float)) / 2.0
+
+            # Build all_cols DataFrame: prepend target column (zeros as placeholder)
             all_data = pd.DataFrame()
-            all_data['tma_m'] = 0.0  # placeholder
+            target_col_name = self.all_cols[0] if len(self.all_cols) > 0 else 'tma_m'
+            all_data[target_col_name] = 0.0  # placeholder
+            
             for col in self.feature_cols:
                 if col in df.columns:
                     all_data[col] = df[col].values
@@ -392,13 +445,16 @@ class MLEngine:
                     all_data[col] = 0.0
 
             # Scale with scaler_all (expects all_cols order)
-            data_scaled = self.scaler_all.transform(all_data[self.all_cols].values)
+            data_scaled_all = self.scaler_all.transform(all_data[self.all_cols].values)
+            # The model only takes features, target is column 0
+            data_scaled_features = data_scaled_all[:, 1:]
 
             # Prepend seed history if available for initial window
             if self.seed_history is not None:
-                data_scaled = np.vstack([self.seed_history, data_scaled])
+                data_scaled = np.vstack([self.seed_history, data_scaled_features])
                 offset = len(self.seed_history)
             else:
+                data_scaled = data_scaled_features
                 offset = 0
 
             # Sliding window predictions
@@ -421,15 +477,24 @@ class MLEngine:
             preds = self.model.predict(X_batch, verbose=0)
             preds_scaled = preds[0] if isinstance(preds, list) else preds
 
-            # Inverse transform
+            # Inverse transform (gets delta_pred)
             preds_value = self.scaler_target.inverse_transform(preds_scaled).flatten()
 
             # Assign to df
             df['tma_predicted'] = np.nan
             df['status'] = 'Pending'
 
-            for idx, pred_val in zip(valid_indices, preds_value):
+            for i, (idx, delta_pred) in enumerate(zip(valid_indices, preds_value)):
                 if 0 <= idx < len(df):
+                    # V2 Reconstruction: tma_pred(t) = tma_actual(t-1) + delta_pred
+                    # Get tma_actual(t-1). If idx==0, use self.last_tma_m (or from df if available)
+                    if idx > 0 and 'tma_m' in df.columns:
+                        prev_actual = float(df.loc[df.index[idx-1], 'tma_m'])
+                    else:
+                        prev_actual = self.last_tma_m
+
+                    pred_val = prev_actual + delta_pred
+                    
                     df.loc[df.index[idx], 'tma_predicted'] = float(pred_val)
                     df.loc[df.index[idx], 'status'] = (
                         "Bahaya" if pred_val >= threshold else "Normal"
@@ -444,3 +509,42 @@ class MLEngine:
             df['tma_predicted'] = np.nan
             df['status'] = 'Error'
             return df
+
+    def get_historical_data(self, target_date_str):
+        """
+        Query the original imputed dataset for a specific date string (YYYY-MM-DD).
+        """
+        dataset_path = os.path.join(settings.BASE_DIR, 'Bajulmati_Dataset_2018_2026_Imputed.csv')
+        if not os.path.exists(dataset_path):
+            return []
+            
+        try:
+            # We can load this lazily. It's ~1MB so it takes ~20ms.
+            df = pd.read_csv(dataset_path)
+            # Ensure datetime column exists
+            if 'datetime' not in df.columns:
+                return []
+                
+            # Convert to string to easily match 'YYYY-MM-DD'
+            df['date_str'] = df['datetime'].astype(str).str[:10]
+            
+            # Filter by date
+            filtered = df[df['date_str'] == target_date_str]
+            
+            if filtered.empty:
+                return []
+                
+            # Convert to list of dicts for the frontend
+            # We only need specific columns to keep it lightweight
+            cols_to_keep = ['datetime', 'tma_m', 'curah_hujan_mm', 'cuaca_kode', 'smd_kanan_q_ls', 'smd_kiri_q_ls']
+            result = filtered[cols_to_keep].to_dict('records')
+            
+            # Add a human readable status based on current threshold
+            th = self.get_threshold()
+            for r in result:
+                r['status'] = 'Bahaya' if r['tma_m'] >= th else 'Normal'
+                
+            return result
+        except Exception as e:
+            print(f"Error reading historical data: {e}")
+            return []

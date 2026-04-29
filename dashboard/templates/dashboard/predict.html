@@ -94,4 +94,16 @@
 
 {% block scripts %}
 <script src="{% static 'js/predict.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr("#id_waktu", {
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
+            time_24hr: true,
+            allowInput: true,
+            theme: "dark",
+            placeholder: "Pilih Waktu..."
+        });
+    });
+</script>
 {% endblock %}

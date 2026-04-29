@@ -4,6 +4,37 @@
 {% block title %}Dashboard TMA - Bajulmati Dam{% endblock %}
 
 {% block content %}
+<style>
+    /* noUiSlider Dark Theme Customizations */
+    .noUi-target {
+        background: #333333;
+        border: none;
+        border-radius: 4px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    }
+    .noUi-connect {
+        background: #007bff; /* Primary blue */
+    }
+    .noUi-horizontal {
+        height: 8px;
+    }
+    .noUi-handle {
+        background: #1e1e1e;
+        border: 2px solid #007bff;
+        border-radius: 50%;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+        cursor: ew-resize;
+    }
+    .noUi-horizontal .noUi-handle {
+        width: 18px;
+        height: 18px;
+        right: -9px;
+        top: -5px;
+    }
+    .noUi-handle:before, .noUi-handle:after {
+        display: none; /* Remove default lines inside handle */
+    }
+</style>
 <div class="p-gutter md:p-lg space-y-lg max-w-[1920px] mx-auto w-full">
     <!-- Section 1: Beranda -->
     <section class="space-y-md">
@@ -42,6 +73,14 @@
                     <h3 class="font-h2 text-h2 text-on-surface mb-sm">📉 Kinerja Model (Evaluasi Data Uji)</h3>
                     <div class="flex-grow relative min-h-[300px] mt-sm">
                         <canvas id="staticChart"></canvas>
+                    </div>
+                    <!-- Range Slider Container -->
+                    <div class="mt-8 mb-4 px-6">
+                        <div id="staticChartSlider" class="mb-2"></div>
+                        <div class="flex justify-between font-label-caps text-[11px] text-on-surface-variant mt-3" id="sliderLabels">
+                            <span id="sliderStartLabel">Awal</span>
+                            <span id="sliderEndLabel">Akhir</span>
+                        </div>
                     </div>
                 </div>
 
@@ -180,18 +219,22 @@ if (document.getElementById('staticChart')) {
     predGradient.addColorStop(0, 'rgba(74, 124, 255, 0.4)');
     predGradient.addColorStop(1, 'rgba(74, 124, 255, 0.0)');
 
-    new Chart(staticCtx, {
+    // Default to last 150 points for initial load to keep it fast and readable
+    const initialStart = Math.max(0, staticLabels.length - 150);
+    const initialEnd = Math.max(0, staticLabels.length - 1);
+
+    let staticChart = new Chart(staticCtx, {
         type: 'line',
         data: {
-            labels: staticLabels,
+            labels: staticLabels.slice(initialStart, initialEnd + 1),
             datasets: [
                 {
                     label: 'TMA Prediksi',
-                    data: staticPredicteds,
+                    data: staticPredicteds.slice(initialStart, initialEnd + 1),
                     borderColor: '#4a7cff',
                     backgroundColor: predGradient,
                     fill: true,
-                    tension: 0.4, // Smooth curve
+                    tension: 0.4,
                     pointRadius: 0,
                     pointHoverRadius: 6,
                     pointHoverBackgroundColor: '#4a7cff',
@@ -199,7 +242,7 @@ if (document.getElementById('staticChart')) {
                 },
                 {
                     label: 'TMA Aktual',
-                    data: staticActuals,
+                    data: staticActuals.slice(initialStart, initialEnd + 1),
                     borderColor: '#10b981',
                     backgroundColor: 'transparent',
                     fill: false,
@@ -214,6 +257,38 @@ if (document.getElementById('staticChart')) {
         },
         options: commonOptions
     });
+
+    // Initialize noUiSlider
+    const slider = document.getElementById('staticChartSlider');
+    if (slider && staticLabels.length > 0) {
+        noUiSlider.create(slider, {
+            start: [initialStart, initialEnd],
+            connect: true,
+            step: 1,
+            range: {
+                'min': 0,
+                'max': staticLabels.length - 1
+            }
+        });
+
+        const startLabel = document.getElementById('sliderStartLabel');
+        const endLabel = document.getElementById('sliderEndLabel');
+
+        slider.noUiSlider.on('update', function (values, handle) {
+            const startIdx = parseInt(values[0]);
+            const endIdx = parseInt(values[1]);
+
+            // Update Labels
+            if(staticLabels[startIdx]) startLabel.innerHTML = staticLabels[startIdx];
+            if(staticLabels[endIdx]) endLabel.innerHTML = staticLabels[endIdx];
+
+            // Update Chart
+            staticChart.data.labels = staticLabels.slice(startIdx, endIdx + 1);
+            staticChart.data.datasets[0].data = staticPredicteds.slice(startIdx, endIdx + 1);
+            staticChart.data.datasets[1].data = staticActuals.slice(startIdx, endIdx + 1);
+            staticChart.update();
+        });
+    }
 }
 
 if (document.getElementById('tmaChart')) {

@@ -10,4 +10,5 @@ urlpatterns = [
     path('api/system-status/', views.system_status_api, name='system_status'),
     path('export/csv/', views.export_csv_view, name='export_csv'),
     path('export/pdf/', views.export_pdf_view, name='export_pdf'),
+    path('historical-data/', views.historical_data_view, name='historical_data'),
 ]

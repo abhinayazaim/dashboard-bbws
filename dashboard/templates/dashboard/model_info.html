@@ -75,6 +75,10 @@
                         <th class="py-2 font-label-caps text-label-caps text-on-surface-variant w-1/2">MAPE</th>
                         <td class="py-2 font-data-mono text-data-mono text-on-surface text-right">{{ metrics.test_mape|floatformat:4|default:"1.42" }}%</td>
                     </tr>
+                    <tr class="border-b border-[#333333]">
+                        <th class="py-2 font-label-caps text-label-caps text-on-surface-variant w-1/2">NSE</th>
+                        <td class="py-2 font-data-mono text-data-mono text-on-surface text-right">{{ metrics.test_nse|floatformat:4|default:"0.99" }}</td>
+                    </tr>
                     <tr>
                         <th class="py-2 font-label-caps text-label-caps text-on-surface-variant w-1/2">Last Training</th>
                         <td class="py-2 font-data-mono text-data-mono text-on-surface text-right">{{ model_info.trained_at|default:"24 Oct 2023, 02:00 UTC" }}</td>

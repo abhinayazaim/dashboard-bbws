@@ -14,20 +14,12 @@ def generate():
         print("CSV not found.")
         return
 
-    # Read the last 500 rows to ensure we have enough for look_back
+    # Read the full dataset
     df = pd.read_csv(csv_path)
-    df = df.tail(300).reset_index(drop=True)
     
     engine = MLEngine()
     
     # We need to simulate a continuous batch prediction.
-    # The batch predict needs all feature cols.
-    # Let's ensure the df has the right cols.
-    missing = [c for c in engine.feature_cols if c not in df.columns]
-    if missing:
-        print(f"Missing columns in CSV: {missing}")
-        return
-
     print("Running batch prediction on subset...")
     # predict_batch adds 'tma_predicted'
     # Wait, the engine's predict_batch uses seed_history if we don't pass continuous data.
@@ -36,8 +28,8 @@ def generate():
     # We can take the last 150 rows.
     result_df = engine.predict_batch(df)
     
-    # Filter out NaNs
-    valid_df = result_df.dropna(subset=['tma_predicted']).tail(150)
+    # Filter out NaNs to keep all valid predictions
+    valid_df = result_df.dropna(subset=['tma_predicted'])
     
     if valid_df.empty:
         print("No valid predictions generated.")
@@ -49,7 +41,7 @@ def generate():
     
     for _, row in valid_df.iterrows():
         # Prefer datetime column if available, else use index
-        dt = row.get('waktu', str(_))
+        dt = row.get('datetime', row.get('waktu', str(_)))
         if isinstance(dt, str) and ' ' in dt:
             dt = dt.split(' ')[0] # just the date or time
             

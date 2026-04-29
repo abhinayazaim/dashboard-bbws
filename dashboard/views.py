@@ -226,18 +226,8 @@ def batch_predict_view(request):
 
                 engine = MLEngine()
 
-                # Check for required feature columns
-                missing_cols = [
-                    col for col in engine.feature_cols if col not in df.columns
-                ]
-                if missing_cols:
-                    messages.error(
-                        request,
-                        f"Kolom tidak lengkap. Kurang: {', '.join(missing_cols)}"
-                    )
-                    return render(request, 'dashboard/batch.html', {'form': form})
-
                 # Run batch prediction
+                # predict_batch will automatically compute V2 features (log, avg) if missing
                 result_df = engine.predict_batch(df)
 
                 # Create batch session
@@ -354,19 +344,23 @@ def model_info_view(request):
     else:
         weights_normalized = []
 
-    # Feature display names
+    # Feature display names for V2 model
     feature_display_names = {
+        'delta_tma': 'Delta TMA (Target)',
+        'curah_hujan_log': 'Curah Hujan (Log)',
+        'cuaca_kode': 'Kode Cuaca',
+        'smd_avg': 'Debit Rata-rata (SMD)',
+        'delta_tma_lag1': 'Delta TMA (Lag 1)',
+        'jam_kode': 'Jam Kode',
+        # Legacy
         'tma_m': 'TMA (Target)',
         'curah_hujan_mm': 'Curah Hujan',
-        'cuaca_kode': 'Kode Cuaca',
         'smd_kanan_q_ls': 'Debit Kanan',
         'smd_kiri_q_ls': 'Debit Kiri',
         'tma_lag1': 'TMA (Lag 1)',
         'tma_lag2': 'TMA (Lag 2)',
         'tma_lag3': 'TMA (Lag 3)',
-        'delta_tma': 'Delta TMA',
         'tma_rolling_mean_3': 'Rolling Mean',
-        'jam_kode': 'Jam Kode',
     }
 
     feature_data = []
@@ -410,3 +404,18 @@ def export_csv_view(request):
 def export_pdf_view(request):
     """Export filtered history to PDF."""
     return export_history_to_pdf(request)
+
+def historical_data_view(request):
+    """View to query and display historical data from the original dataset."""
+    target_date = request.GET.get('target_date', '')
+    data = []
+    
+    if target_date:
+        engine = MLEngine()
+        data = engine.get_historical_data(target_date)
+        
+    context = {
+        'target_date': target_date,
+        'historical_data': data,
+    }
+    return render(request, 'dashboard/historical_data.html', context)

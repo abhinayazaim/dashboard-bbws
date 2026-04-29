@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Historis - Bajulmati Dam{% endblock %}
+
+{% block content %}
+<div class="mb-lg">
+    <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Data Historis Aktual</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Cari dan lihat data aktual waduk Bajulmati berdasarkan tanggal tertentu di masa lalu.</p>
+</div>
+
+<!-- Search Form -->
+<div class="bg-[#1e1e1e] border border-[#333333] rounded-lg p-lg mb-lg">
+    <form method="GET" action="{% url 'historical_data' %}" class="flex flex-wrap items-end gap-md">
+        <div class="flex-grow max-w-xs">
+            <label for="target_date" class="block font-label-sm text-label-sm text-on-surface-variant mb-2 uppercase tracking-wider">Pilih Tanggal</label>
+            <input type="date" id="target_date" name="target_date" value="{{ target_date }}" class="form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]" required>
+        </div>
+        <button type="submit" class="bg-[#1F3864] text-[#e0e0e0] px-lg py-2 rounded hover:bg-primary-container/90 transition-colors font-body-md flex items-center gap-2">
+            <span class="material-symbols-outlined">search</span>
+            Cari Data
+        </button>
+    </form>
+</div>
+
+<!-- Results Section -->
+<div class="bg-[#1e1e1e] border border-[#333333] rounded-lg overflow-hidden">
+    <div class="p-margin border-b border-[#333333] flex justify-between items-center bg-[#1a1b1f]">
+        <h3 class="font-h2 text-h2 text-on-surface">Hasil Pencarian: {{ target_date|default:"Belum ada pencarian" }}</h3>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-[#333333] bg-[#121212]">
+                    <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">Waktu</th>
+                    <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">TMA (m)</th>
+                    <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">Curah Hujan (mm)</th>
+                    <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">Debit Kanan (l/s)</th>
+                    <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">Debit Kiri (l/s)</th>
+                    <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#333333]">
+                {% if historical_data %}
+                    {% for row in historical_data %}
+                    <tr class="hover:bg-[#1a1b1f] transition-colors">
+                        <td class="py-md px-margin font-body-sm text-on-surface">{{ row.datetime }}</td>
+                        <td class="py-md px-margin font-body-sm text-on-surface">{{ row.tma_m|floatformat:3 }}</td>
+                        <td class="py-md px-margin font-body-sm text-on-surface">{{ row.curah_hujan_mm|floatformat:2 }}</td>
+                        <td class="py-md px-margin font-body-sm text-on-surface">{{ row.smd_kanan_q_ls|floatformat:1 }}</td>
+                        <td class="py-md px-margin font-body-sm text-on-surface">{{ row.smd_kiri_q_ls|floatformat:1 }}</td>
+                        <td class="py-md px-margin">
+                            {% if row.status == 'Bahaya' %}
+                                <span class="bg-error/20 text-[#ffb4ab] border border-error/30 px-3 py-1 rounded-full text-xs font-semibold tracking-wide inline-flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+                                    BAHAYA
+                                </span>
+                            {% else %}
+                                <span class="bg-[#1b3b2b] text-[#81c995] border border-[#234d38] px-3 py-1 rounded-full text-xs font-semibold tracking-wide inline-flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-[#81c995]"></span>
+                                    NORMAL
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="py-xl text-center text-on-surface-variant font-body-md">
+                            {% if target_date %}
+                                Tidak ada data yang ditemukan untuk tanggal tersebut.
+                            {% else %}
+                                Silakan pilih tanggal untuk melihat riwayat data.
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr("#target_date", {
+            dateFormat: "Y-m-d",
+            allowInput: true,
+            theme: "dark",
+            placeholder: "Pilih Tanggal..."
+        });
+    });
+</script>
+{% endblock %}

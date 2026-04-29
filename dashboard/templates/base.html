@@ -13,6 +13,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
     
+    <!-- Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    
+    <!-- noUiSlider -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
+    
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -162,6 +171,10 @@
             <a href="{% url 'batch_predict' %}" class="{% if request.resolver_match.url_name == 'batch_predict' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
                 <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'batch_predict' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>upload_file</span>
                 Batch Upload
+            </a>
+            <a href="{% url 'historical_data' %}" class="{% if request.resolver_match.url_name == 'historical_data' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
+                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'historical_data' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>calendar_month</span>
+                Data Historis
             </a>
             <a href="{% url 'history' %}" class="{% if request.resolver_match.url_name == 'history' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
                 <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'history' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>history</span>
