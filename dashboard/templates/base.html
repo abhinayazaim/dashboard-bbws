@@ -170,7 +170,7 @@
             </a>
             <a href="{% url 'batch_predict' %}" class="{% if request.resolver_match.url_name == 'batch_predict' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
                 <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'batch_predict' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>upload_file</span>
-                Unggah Batch
+                Upload File
             </a>
             <a href="{% url 'historical_data' %}" class="{% if request.resolver_match.url_name == 'historical_data' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
                 <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'historical_data' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>calendar_month</span>

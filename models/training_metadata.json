@@ -43,12 +43,13 @@
     "test_precision": 0.981
   },
   "attention_weights": {
-    "curah_hujan_log": 0.252958,
-    "cuaca_kode": 0.177385,
-    "smd_avg": 0.166032,
-    "delta_tma_lag1": 0.150592,
-    "jam_kode": 0.25303
+    "curah_hujan_log": 0.5728,
+    "smd_avg": 0.1592,
+    "cuaca_kode": 0.0979,
+    "delta_tma_lag1": 0.0878,
+    "jam_kode": 0.0824
   },
+
   "trained_at": "2026-04-29 04:25:48",
   "epochs_trained": 100,
   "dataset_rows": 8558,

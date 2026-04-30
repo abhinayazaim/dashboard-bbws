@@ -54,14 +54,16 @@ def index_view(request):
     danger_count = PredictionRecord.objects.filter(status='Bahaya').count()
 
     # Last 50 for chart
-    last_50 = list(PredictionRecord.objects.order_by('-created_at')[:50])
+    # Order by created_at then id to keep batch rows in sequence even if created at same second
+    last_50 = list(PredictionRecord.objects.order_by('-created_at', '-id')[:50])
     last_50.reverse()
 
     chart_labels = []
     chart_data = []
     for p in last_50:
-        # Show full date+time so the chart is not confusing when data spans multiple days
-        chart_labels.append(p.created_at.strftime('%d %b %H:%M'))
+        # Priority: use 'waktu' (actual observation time) if available, fallback to 'created_at'
+        label_time = p.waktu if p.waktu else p.created_at
+        chart_labels.append(label_time.strftime('%d %b %H:%M'))
         chart_data.append(round(p.tma_predicted, 3))
 
     # Last 4 for log table
@@ -341,11 +343,15 @@ def history_view(request):
         query = query.filter(status=status_filter)
         
     if search_query:
-        query = query.filter(
-            Q(batch_session__session_id__icontains=search_query) |
-            Q(source__icontains=search_query) |
-            Q(status__icontains=search_query)
-        )
+        try:
+            obs_date = datetime.strptime(search_query, '%Y-%m-%d').date()
+            query = query.filter(waktu__date=obs_date)
+        except ValueError:
+            # If not a valid date, fall back to text search on source/status
+            query = query.filter(
+                Q(source__icontains=search_query) |
+                Q(status__icontains=search_query)
+            )
 
     total_count = query.count()
     paginator = Paginator(query, 10)
@@ -367,49 +373,35 @@ def model_info_view(request):
     """Model information and transparency page."""
     engine = MLEngine()
 
-    # Feature names and attention weights
-    all_cols = engine.all_cols if engine.all_cols else []
-    features = all_cols
-    weights = engine.attention_weights.tolist() if engine.attention_weights is not None else []
-
-    # Convert weights to absolute percentage (0-100% since they sum to 1.0)
-    if weights:
-        weights_normalized = [round(w * 100, 1) for w in weights]
-    else:
-        weights_normalized = []
+    # Features and weights from engine (now following metadata/validated image)
+    features = engine.feature_cols
+    weights = engine.attention_weights if engine.attention_weights is not None else []
 
     # Feature display names for V2 model
     feature_display_names = {
-        'delta_tma': 'Delta TMA (Target)',
         'curah_hujan_log': 'Curah Hujan (Log)',
         'cuaca_kode': 'Kode Cuaca',
         'smd_avg': 'Debit Rata-rata (SMD)',
         'delta_tma_lag1': 'Delta TMA (Lag 1)',
         'jam_kode': 'Jam Kode',
-        # Legacy
-        'tma_m': 'TMA (Target)',
-        'curah_hujan_mm': 'Curah Hujan',
-        'smd_kanan_q_ls': 'Debit Kanan',
-        'smd_kiri_q_ls': 'Debit Kiri',
-        'tma_lag1': 'TMA (Lag 1)',
-        'tma_lag2': 'TMA (Lag 2)',
-        'tma_lag3': 'TMA (Lag 3)',
-        'tma_rolling_mean_3': 'Rolling Mean',
     }
 
     feature_data = []
-    for i, feat in enumerate(features):
-        is_lag = any(x in feat for x in ['lag', 'jam', 'rolling', 'delta', 'tma_m'])
-        feature_data.append({
-            'name': feature_display_names.get(feat, feat),
-            'raw_name': feat,
-            'weight': round(weights[i], 4) if i < len(weights) else 0,
-            'bar_width': weights_normalized[i] if i < len(weights_normalized) else 0,
-            'is_lag': is_lag,
-        })
+    if len(weights) > 0:
+        max_w = max(weights)
+        for i, feat in enumerate(features):
+            w = weights[i] if i < len(weights) else 0
+            feature_data.append({
+                'name': feature_display_names.get(feat, feat),
+                'raw_name': feat,
+                'weight': round(w, 4),
+                'bar_width': round((w / max_w) * 100, 1) if max_w > 0 else 0,
+                'is_lag': 'lag' in feat.lower(),
+            })
 
     metrics = engine.get_model_metrics()
     model_info = engine.get_model_info()
+
 
     context = {
         'feature_data': feature_data,
@@ -417,6 +409,7 @@ def model_info_view(request):
         'model_info': model_info,
         'is_loaded': engine.is_loaded,
     }
+
     return render(request, 'dashboard/model_info.html', context)
 
 

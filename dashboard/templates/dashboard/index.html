@@ -10,54 +10,72 @@
         background: #333333;
         border: none;
         border-radius: 4px;
-        box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
     }
+
     .noUi-connect {
-        background: #007bff; /* Primary blue */
+        background: #007bff;
+        /* Primary blue */
     }
+
     .noUi-horizontal {
         height: 8px;
     }
+
     .noUi-handle {
         background: #1e1e1e;
         border: 2px solid #007bff;
         border-radius: 50%;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
         cursor: ew-resize;
     }
+
     .noUi-horizontal .noUi-handle {
         width: 18px;
         height: 18px;
         right: -9px;
         top: -5px;
     }
-    .noUi-handle:before, .noUi-handle:after {
-        display: none; /* Remove default lines inside handle */
+
+    .noUi-handle:before,
+    .noUi-handle:after {
+        display: none;
+        /* Remove default lines inside handle */
     }
 </style>
 <div class="p-gutter md:p-lg space-y-lg max-w-[1920px] mx-auto w-full">
     <!-- Section 1: Beranda Hero with Slideshow -->
-    <section class="relative h-[280px] rounded-2xl overflow-hidden flex flex-col justify-end p-lg border border-outline-variant/20 shadow-2xl group">
+    <section
+        class="relative h-[280px] rounded-2xl overflow-hidden flex flex-col justify-end p-lg border border-outline-variant/20 shadow-2xl group">
         <!-- Slideshow Container -->
         <div class="absolute inset-0 z-0">
-            <div class="slideshow-image absolute inset-0 opacity-0 transition-opacity duration-1000 ease-in-out" style="background-image: url('{% static 'bajulmati.jpg' %}'); background-size: cover; background-position: center;"></div>
-            <div class="slideshow-image absolute inset-0 opacity-0 transition-opacity duration-1000 ease-in-out" style="background-image: url('{% static 'bajulmati 2.jpg' %}'); background-size: cover; background-position: center;"></div>
-            <div class="slideshow-image absolute inset-0 opacity-0 transition-opacity duration-1000 ease-in-out" style="background-image: url('{% static 'bajulmati 4.webp' %}'); background-size: cover; background-position: center;"></div>
-            
+            <div class="slideshow-image absolute inset-0 opacity-0 transition-opacity duration-1000 ease-in-out"
+                style="background-image: url('{% static 'bajulmati.jpg' %}'); background-size: cover; background-position: center;">
+            </div>
+            <div class="slideshow-image absolute inset-0 opacity-0 transition-opacity duration-1000 ease-in-out"
+                style="background-image: url('{% static 'bajulmati 2.jpg' %}'); background-size: cover; background-position: center;">
+            </div>
+            <div class="slideshow-image absolute inset-0 opacity-0 transition-opacity duration-1000 ease-in-out"
+                style="background-image: url('{% static 'bajulmati 4.webp' %}'); background-size: cover; background-position: center;">
+            </div>
+
             <!-- Glassmorphism Gradient Overlay -->
             <div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/60 to-transparent z-10"></div>
             <div class="absolute inset-0 bg-black/20 z-10"></div>
         </div>
-        
+
         <div class="relative z-20">
-            <span class="inline-block px-3 py-1 bg-primary/20 border border-primary/30 backdrop-blur-md rounded-full text-[10px] font-bold text-primary-fixed-dim uppercase tracking-[0.2em] mb-3">Monitoring Dashboard</span>
+            <span
+                class="inline-block px-3 py-1 bg-primary/20 border border-primary/30 backdrop-blur-md rounded-full text-[10px] font-bold text-primary-fixed-dim uppercase tracking-[0.2em] mb-3">Monitoring
+                Dashboard</span>
             <h2 class="font-display-lg text-display-lg text-white drop-shadow-lg">Beranda</h2>
-            <p class="text-on-surface-variant max-w-2xl mt-2 line-clamp-2">Pantau kondisi Tinggi Muka Air (TMA) Bendungan Bajulmati secara real-time dengan dukungan prediksi kecerdasan buatan.</p>
+            <p class="text-on-surface-variant max-w-2xl mt-2 line-clamp-2">Pantau kondisi Tinggi Muka Air (TMA)
+                Bendungan Bajulmati secara real-time dengan dukungan prediksi kecerdasan buatan.</p>
         </div>
     </section>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const slides = document.querySelectorAll('.slideshow-image');
             let currentSlide = 0;
 
@@ -76,302 +94,318 @@
             }
         });
     </script>
-        
-        <!-- KPI Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
-            <!-- KPI 1 -->
-            <div class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
-                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Total Prediksi</div>
-                <div class="font-display-lg text-display-lg text-on-surface">{{ total_predictions }}</div>
+
+    <!-- KPI Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+        <!-- KPI 1 -->
+        <div
+            class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Total Prediksi</div>
+            <div class="font-display-lg text-display-lg text-on-surface">{{ total_predictions }}</div>
+        </div>
+        <!-- KPI 2 -->
+        <div
+            class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Prediksi Hari Ini</div>
+            <div class="font-display-lg text-display-lg text-on-surface">{{ today_predictions }}</div>
+        </div>
+        <!-- KPI 3 -->
+        <div
+            class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Status BAHAYA</div>
+            <div
+                class="font-display-lg text-display-lg text-error {% if danger_count > 0 %}pulse-bahaya{% endif %} inline-block">
+                {{ danger_count }}</div>
+        </div>
+        <!-- KPI 4 -->
+        <div
+            class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Model Aktif</div>
+            <div class="font-data-mono text-data-mono text-on-surface text-lg mt-2">LSTM-Attn v2.0</div>
+        </div>
+    </div>
+
+    <!-- Main Chart & Recent Table Module -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+        <!-- Chart Area (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col gap-gutter">
+            <!-- Static Chart: Model Performance -->
+            <div class="bg-surface-container border border-outline-variant rounded p-md flex flex-col">
+                <h3 class="font-h2 text-h2 text-on-surface mb-sm">Kinerja Model (Evaluasi Data Uji)</h3>
+                <div class="flex-grow relative min-h-[300px] mt-sm">
+                    <canvas id="staticChart"></canvas>
+                </div>
+                <!-- Range Slider Container -->
+                <div class="mt-8 mb-4 px-6">
+                    <div id="staticChartSlider" class="mb-2"></div>
+                    <div class="flex justify-between font-label-caps text-[11px] text-on-surface-variant mt-3"
+                        id="sliderLabels">
+                        <span id="sliderStartLabel">Awal</span>
+                        <span id="sliderEndLabel">Akhir</span>
+                    </div>
+                </div>
             </div>
-            <!-- KPI 2 -->
-            <div class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
-                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Prediksi Hari Ini</div>
-                <div class="font-display-lg text-display-lg text-on-surface">{{ today_predictions }}</div>
-            </div>
-            <!-- KPI 3 -->
-            <div class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
-                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Status BAHAYA</div>
-                <div class="font-display-lg text-display-lg text-error {% if danger_count > 0 %}pulse-bahaya{% endif %} inline-block">{{ danger_count }}</div>
-            </div>
-            <!-- KPI 4 -->
-            <div class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
-                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Model Aktif</div>
-                <div class="font-data-mono text-data-mono text-on-surface text-lg mt-2">LSTM-Attn v2.0<br><span class="text-xs text-on-surface-variant mt-1 block">RMSE: {{ metrics.test_rmse|floatformat:4|default:"0.0123" }}</span></div>
+
+            <!-- Dynamic Chart: Real-time User Predictions -->
+            <div class="bg-surface-container border border-outline-variant rounded p-md flex flex-col">
+                <h3 class="font-h2 text-h2 text-on-surface mb-sm">Tren Prediksi TMA (Dari Upload File)</h3>
+                <div class="flex-grow relative min-h-[300px] mt-sm">
+                    <canvas id="tmaChart"></canvas>
+                </div>
             </div>
         </div>
 
-        <!-- Main Chart & Recent Table Module -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-            <!-- Chart Area (8 cols) -->
-            <div class="lg:col-span-8 flex flex-col gap-gutter">
-                <!-- Static Chart: Model Performance -->
-                <div class="bg-surface-container border border-outline-variant rounded p-md flex flex-col">
-                    <h3 class="font-h2 text-h2 text-on-surface mb-sm">Kinerja Model (Evaluasi Data Uji)</h3>
-                    <div class="flex-grow relative min-h-[300px] mt-sm">
-                        <canvas id="staticChart"></canvas>
-                    </div>
-                    <!-- Range Slider Container -->
-                    <div class="mt-8 mb-4 px-6">
-                        <div id="staticChartSlider" class="mb-2"></div>
-                        <div class="flex justify-between font-label-caps text-[11px] text-on-surface-variant mt-3" id="sliderLabels">
-                            <span id="sliderStartLabel">Awal</span>
-                            <span id="sliderEndLabel">Akhir</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Dynamic Chart: Real-time User Predictions -->
-                <div class="bg-surface-container border border-outline-variant rounded p-md flex flex-col">
-                    <h3 class="font-h2 text-h2 text-on-surface mb-sm">Tren Prediksi TMA (Dari Upload File)</h3>
-                    <div class="flex-grow relative min-h-[300px] mt-sm">
-                        <canvas id="tmaChart"></canvas>
-                    </div>
-                </div>
+        <!-- Recent Table Area (4 cols) -->
+        <div class="lg:col-span-4 bg-surface-container border border-outline-variant rounded p-md flex flex-col">
+            <h3 class="font-h2 text-h2 text-on-surface mb-sm">Log Terbaru</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr
+                            class="bg-surface border-b border-outline-variant font-label-caps text-label-caps text-on-surface-variant">
+                            <th class="py-2 px-3">Waktu</th>
+                            <th class="py-2 px-3">TMA (m)</th>
+                            <th class="py-2 px-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-data-mono text-data-mono">
+                        {% for p in last_4 %}
+                        <tr
+                            class="border-b border-outline-variant/50 {% if p.status == 'Bahaya' %}bg-error-container/10{% endif %}">
+                            <td class="py-3 px-3 text-on-surface">{{ p.created_at|date:"d M H:i" }}</td>
+                            <td
+                                class="py-3 px-3 {% if p.status == 'Bahaya' %}font-bold text-error{% else %}text-on-surface{% endif %}">
+                                {{ p.tma_predicted|floatformat:3 }}</td>
+                            <td class="py-3 px-3">
+                                {% if p.status == 'Bahaya' %}
+                                <span
+                                    class="px-2 py-1 bg-[#dc3545] text-white rounded text-xs font-bold pulse-bahaya uppercase tracking-widest">BAHAYA</span>
+                                {% else %}
+                                <span
+                                    class="px-2 py-1 bg-secondary-container/20 text-secondary border border-secondary/50 rounded text-xs font-bold uppercase tracking-widest">NORMAL</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-on-surface-variant">Belum ada data</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-
-            <!-- Recent Table Area (4 cols) -->
-            <div class="lg:col-span-4 bg-surface-container border border-outline-variant rounded p-md flex flex-col">
-                <h3 class="font-h2 text-h2 text-on-surface mb-sm">Log Terbaru</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-surface border-b border-outline-variant font-label-caps text-label-caps text-on-surface-variant">
-                                <th class="py-2 px-3">Waktu</th>
-                                <th class="py-2 px-3">TMA (m)</th>
-                                <th class="py-2 px-3">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="font-data-mono text-data-mono">
-                            {% for p in last_4 %}
-                            <tr class="border-b border-outline-variant/50 {% if p.status == 'Bahaya' %}bg-error-container/10{% endif %}">
-                                <td class="py-3 px-3 text-on-surface">{{ p.created_at|date:"d M H:i" }}</td>
-                                <td class="py-3 px-3 {% if p.status == 'Bahaya' %}font-bold text-error{% else %}text-on-surface{% endif %}">{{ p.tma_predicted|floatformat:3 }}</td>
-                                <td class="py-3 px-3">
-                                    {% if p.status == 'Bahaya' %}
-                                    <span class="px-2 py-1 bg-[#dc3545] text-white rounded text-xs font-bold pulse-bahaya uppercase tracking-widest">BAHAYA</span>
-                                    {% else %}
-                                    <span class="px-2 py-1 bg-secondary-container/20 text-secondary border border-secondary/50 rounded text-xs font-bold uppercase tracking-widest">NORMAL</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="3" class="text-center py-4 text-on-surface-variant">Belum ada data</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="mt-4 text-right">
-                    <a href="{% url 'history' %}" class="text-primary hover:text-primary-fixed-dim text-sm font-medium">Lihat Semua Log &rarr;</a>
-                </div>
+            <div class="mt-4 text-right">
+                <a href="{% url 'history' %}"
+                    class="text-primary hover:text-primary-fixed-dim text-sm font-medium">Lihat Semua Log &rarr;</a>
             </div>
         </div>
+    </div>
     </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Data for Static Model Performance Chart
-const staticLabels = {{ static_chart_labels|safe }};
-const staticActuals = {{ static_chart_actuals|safe }};
-const staticPredicteds = {{ static_chart_predicteds|safe }};
+    // Data for Static Model Performance Chart
+    const staticLabels = {{ static_chart_labels|safe }};
+    const staticActuals = {{ static_chart_actuals|safe }};
+    const staticPredicteds = {{ static_chart_predicteds|safe }};
 
-// Data for Real-time Chart
-const labels = {{ chart_labels|safe }};
-const data = {{ chart_data|safe }};
-const threshold = {{ threshold|default:"88.3794" }};
+    // Data for Real-time Chart
+    const labels = {{ chart_labels|safe }};
+    const data = {{ chart_data|safe }};
+    const threshold = {{ threshold|default:"88.3794" }};
 
-// Global Chart configurations
-Chart.defaults.font.family = "'Roboto', sans-serif";
-Chart.defaults.color = '#8b91a8';
-Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.05)';
+    // Global Chart configurations
+    Chart.defaults.font.family = "'Roboto', sans-serif";
+    Chart.defaults.color = '#8b91a8';
+    Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.05)';
 
-const commonOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-        mode: 'index',
-        intersect: false,
-    },
-    plugins: {
-        legend: {
-            display: true,
-            position: 'top',
-            align: 'end',
-            labels: {
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+                align: 'end',
+                labels: {
+                    usePointStyle: true,
+                    boxWidth: 8,
+                    boxHeight: 8,
+                    padding: 20,
+                    font: { size: 14, weight: '500', family: 'Roboto' }
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(18, 19, 22, 0.95)',
+                titleColor: '#ffffff',
+                bodyColor: '#e3e2e6',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: 1,
+                padding: 14,
+                boxPadding: 8,
                 usePointStyle: true,
-                boxWidth: 8,
-                boxHeight: 8,
-                padding: 20,
-                font: { size: 14, weight: '500', family: 'Roboto' }
+                titleFont: { size: 15, weight: '600', family: 'Roboto' },
+                bodyFont: { size: 14, family: 'Roboto' },
+                cornerRadius: 8,
             }
         },
-        tooltip: {
-            backgroundColor: 'rgba(18, 19, 22, 0.95)',
-            titleColor: '#ffffff',
-            bodyColor: '#e3e2e6',
-            borderColor: 'rgba(255, 255, 255, 0.1)',
-            borderWidth: 1,
-            padding: 14,
-            boxPadding: 8,
-            usePointStyle: true,
-            titleFont: { size: 15, weight: '600', family: 'Roboto' },
-            bodyFont: { size: 14, family: 'Roboto' },
-            cornerRadius: 8,
-        }
-    },
-    scales: {
-        x: {
-            grid: {
-                display: false,
-                drawBorder: false,
+        scales: {
+            x: {
+                grid: {
+                    display: false,
+                    drawBorder: false,
+                },
+                ticks: {
+                    maxTicksLimit: 10,
+                    font: { size: 13, family: 'Roboto' },
+                    color: '#5a6078'
+                }
             },
-            ticks: {
-                maxTicksLimit: 10,
-                font: { size: 13, family: 'Roboto' },
-                color: '#5a6078'
-            }
-        },
-        y: {
-            grid: {
-                borderDash: [4, 4],
-                drawBorder: false,
-                color: 'rgba(255, 255, 255, 0.03)'
-            },
-            ticks: {
-                font: { size: 13, family: 'Roboto' },
-                padding: 10,
-                color: '#5a6078'
+            y: {
+                grid: {
+                    borderDash: [4, 4],
+                    drawBorder: false,
+                    color: 'rgba(255, 255, 255, 0.03)'
+                },
+                ticks: {
+                    font: { size: 13, family: 'Roboto' },
+                    padding: 10,
+                    color: '#5a6078'
+                }
             }
         }
-    }
-};
+    };
 
-if (document.getElementById('staticChart')) {
-    const staticCtx = document.getElementById('staticChart').getContext('2d');
-    
-    // Create Gradients
-    const predGradient = staticCtx.createLinearGradient(0, 0, 0, 400);
-    predGradient.addColorStop(0, 'rgba(74, 124, 255, 0.4)');
-    predGradient.addColorStop(1, 'rgba(74, 124, 255, 0.0)');
+    if (document.getElementById('staticChart')) {
+        const staticCtx = document.getElementById('staticChart').getContext('2d');
 
-    // Default to last 150 points for initial load to keep it fast and readable
-    const initialStart = Math.max(0, staticLabels.length - 150);
-    const initialEnd = Math.max(0, staticLabels.length - 1);
+        // Create Gradients
+        const predGradient = staticCtx.createLinearGradient(0, 0, 0, 400);
+        predGradient.addColorStop(0, 'rgba(74, 124, 255, 0.4)');
+        predGradient.addColorStop(1, 'rgba(74, 124, 255, 0.0)');
 
-    let staticChart = new Chart(staticCtx, {
-        type: 'line',
-        data: {
-            labels: staticLabels.slice(initialStart, initialEnd + 1),
-            datasets: [
-                {
-                    label: 'TMA Prediksi',
-                    data: staticPredicteds.slice(initialStart, initialEnd + 1),
-                    borderColor: '#4a7cff',
-                    backgroundColor: predGradient,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverBackgroundColor: '#4a7cff',
-                    borderWidth: 1.5,
-                    order: 2, // Draw underneath
-                },
-                {
-                    label: 'TMA Aktual',
-                    data: staticActuals.slice(initialStart, initialEnd + 1),
-                    borderColor: '#ff9800', // Bright orange
-                    backgroundColor: 'transparent',
-                    fill: false,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 6,
-                    pointHoverBackgroundColor: '#ff9800',
-                    borderWidth: 1.5, 
-                    borderDash: [4, 4], // Dashed to distinguish
-                    order: 1, // Draw on top
-                }
-            ]
-        },
-        options: commonOptions
-    });
+        // Default to last 150 points for initial load to keep it fast and readable
+        const initialStart = Math.max(0, staticLabels.length - 150);
+        const initialEnd = Math.max(0, staticLabels.length - 1);
 
-    // Initialize noUiSlider
-    const slider = document.getElementById('staticChartSlider');
-    if (slider && staticLabels.length > 0) {
-        noUiSlider.create(slider, {
-            start: [initialStart, initialEnd],
-            connect: true,
-            step: 1,
-            range: {
-                'min': 0,
-                'max': staticLabels.length - 1
-            }
+        let staticChart = new Chart(staticCtx, {
+            type: 'line',
+            data: {
+                labels: staticLabels.slice(initialStart, initialEnd + 1),
+                datasets: [
+                    {
+                        label: 'TMA Prediksi',
+                        data: staticPredicteds.slice(initialStart, initialEnd + 1),
+                        borderColor: '#4a7cff',
+                        backgroundColor: predGradient,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverBackgroundColor: '#4a7cff',
+                        borderWidth: 1.5,
+                        order: 2, // Draw underneath
+                    },
+                    {
+                        label: 'TMA Aktual',
+                        data: staticActuals.slice(initialStart, initialEnd + 1),
+                        borderColor: '#ff9800', // Bright orange
+                        backgroundColor: 'transparent',
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#ff9800',
+                        borderWidth: 1.5,
+                        borderDash: [4, 4], // Dashed to distinguish
+                        order: 1, // Draw on top
+                    }
+                ]
+            },
+            options: commonOptions
         });
 
-        const startLabel = document.getElementById('sliderStartLabel');
-        const endLabel = document.getElementById('sliderEndLabel');
+        // Initialize noUiSlider
+        const slider = document.getElementById('staticChartSlider');
+        if (slider && staticLabels.length > 0) {
+            noUiSlider.create(slider, {
+                start: [initialStart, initialEnd],
+                connect: true,
+                step: 1,
+                range: {
+                    'min': 0,
+                    'max': staticLabels.length - 1
+                }
+            });
 
-        slider.noUiSlider.on('update', function (values, handle) {
-            const startIdx = parseInt(values[0]);
-            const endIdx = parseInt(values[1]);
+            const startLabel = document.getElementById('sliderStartLabel');
+            const endLabel = document.getElementById('sliderEndLabel');
 
-            // Update Labels
-            if(staticLabels[startIdx]) startLabel.innerHTML = staticLabels[startIdx];
-            if(staticLabels[endIdx]) endLabel.innerHTML = staticLabels[endIdx];
+            slider.noUiSlider.on('update', function (values, handle) {
+                const startIdx = parseInt(values[0]);
+                const endIdx = parseInt(values[1]);
 
-            // Update Chart
-            staticChart.data.labels = staticLabels.slice(startIdx, endIdx + 1);
-            staticChart.data.datasets[0].data = staticPredicteds.slice(startIdx, endIdx + 1);
-            staticChart.data.datasets[1].data = staticActuals.slice(startIdx, endIdx + 1);
-            staticChart.update();
+                // Update Labels
+                if (staticLabels[startIdx]) startLabel.innerHTML = staticLabels[startIdx];
+                if (staticLabels[endIdx]) endLabel.innerHTML = staticLabels[endIdx];
+
+                // Update Chart
+                staticChart.data.labels = staticLabels.slice(startIdx, endIdx + 1);
+                staticChart.data.datasets[0].data = staticPredicteds.slice(startIdx, endIdx + 1);
+                staticChart.data.datasets[1].data = staticActuals.slice(startIdx, endIdx + 1);
+                staticChart.update();
+            });
+        }
+    }
+
+    if (document.getElementById('tmaChart')) {
+        const ctx = document.getElementById('tmaChart').getContext('2d');
+
+        const rtGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        rtGradient.addColorStop(0, 'rgba(74, 124, 255, 0.5)');
+        rtGradient.addColorStop(1, 'rgba(74, 124, 255, 0.0)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'TMA Prediksi (m)',
+                        data: data,
+                        borderColor: '#4a7cff',
+                        backgroundColor: rtGradient,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#121316',
+                        pointBorderColor: '#4a7cff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#4a7cff',
+                        borderWidth: 3,
+                    },
+                    {
+                        label: 'Threshold Bahaya (' + parseFloat(threshold).toFixed(2) + 'm)',
+                        data: Array(labels.length).fill(threshold),
+                        borderColor: '#ff4b4b',
+                        backgroundColor: 'transparent',
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        borderWidth: 2,
+                        fill: false,
+                    }
+                ]
+            },
+            options: commonOptions
         });
     }
-}
-
-if (document.getElementById('tmaChart')) {
-    const ctx = document.getElementById('tmaChart').getContext('2d');
-    
-    const rtGradient = ctx.createLinearGradient(0, 0, 0, 400);
-    rtGradient.addColorStop(0, 'rgba(74, 124, 255, 0.5)');
-    rtGradient.addColorStop(1, 'rgba(74, 124, 255, 0.0)');
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'TMA Prediksi (m)',
-                    data: data,
-                    borderColor: '#4a7cff',
-                    backgroundColor: rtGradient,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#121316',
-                    pointBorderColor: '#4a7cff',
-                    pointBorderWidth: 2,
-                    pointHoverRadius: 6,
-                    pointHoverBackgroundColor: '#4a7cff',
-                    borderWidth: 3,
-                },
-                {
-                    label: 'Threshold Bahaya (' + parseFloat(threshold).toFixed(2) + 'm)',
-                    data: Array(labels.length).fill(threshold),
-                    borderColor: '#ff4b4b',
-                    backgroundColor: 'transparent',
-                    borderDash: [6, 4],
-                    pointRadius: 0,
-                    pointHoverRadius: 0,
-                    borderWidth: 2,
-                    fill: false,
-                }
-            ]
-        },
-        options: commonOptions
-    });
-}
 </script>
 <script src="{% static 'js/index.js' %}"></script>
 {% endblock %}

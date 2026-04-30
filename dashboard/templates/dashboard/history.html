@@ -47,14 +47,23 @@
         </select>
     </div>
     
-    <!-- Search -->
-    <div class="flex items-center">
-        <div class="relative w-64">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-            <input type="text" name="q" id="search-input" value="{{ search_query }}" class="w-full bg-[#121212] border border-[#333333] text-on-surface font-body-sm text-body-sm rounded py-1.5 pl-9 pr-3 focus:ring-[#1F3864] focus:border-[#1F3864] placeholder:text-on-surface-variant" placeholder="Cari ID sesi...">
+    <!-- Search by Observation Date -->
+    <div class="flex items-center gap-xs">
+        <label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="search-input">Tgl. Observasi</label>
+        <div class="flex items-center gap-1">
+            <input type="date" name="q" id="search-input" value="{{ search_query }}"
+                class="bg-[#121212] border border-[#333333] text-on-surface text-xs rounded py-1.5 px-3 focus:ring-[#1F3864] focus:border-[#1F3864] cursor-pointer"
+                onchange="this.form.submit()"
+                onfocus="try{this.showPicker();}catch(e){}"
+                onkeydown="return false">
+            {% if search_query %}
+            <a href="?{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}&{% endif %}{% if status_filter %}status={{ status_filter }}{% endif %}"
+               class="text-on-surface-variant hover:text-white text-xs px-2 py-1.5 border border-[#333333] rounded" title="Hapus filter tanggal">✕</a>
+            {% endif %}
         </div>
     </div>
 </form>
+
 
 <!-- Data Table -->
 <div class="bg-[#1e1e1e] border border-[#333333] rounded overflow-hidden">

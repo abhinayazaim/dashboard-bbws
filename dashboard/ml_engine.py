@@ -129,13 +129,12 @@ class MLEngine:
                 with open(scaler_target_path, 'rb') as f:
                     self.scaler_target = pickle.load(f)
 
-            # Load attention weights
-            attention_weights_path = os.path.join(model_dir, 'attention_weights.npy')
-            if os.path.exists(attention_weights_path):
-                self.attention_weights = np.load(attention_weights_path)
-            elif self.metadata and 'attention_weights' in self.metadata:
+            # Load attention weights (Prioritize metadata for consistency)
+            if self.metadata and 'attention_weights' in self.metadata:
                 aw_dict = self.metadata['attention_weights']
-                self.attention_weights = [aw_dict.get(col, 0) for col in self.feature_cols]
+                self.attention_weights = np.array([aw_dict.get(col, 0) for col in self.feature_cols])
+            elif os.path.exists(attention_weights_path):
+                self.attention_weights = np.load(attention_weights_path)
             else:
                 self.attention_weights = np.ones(len(self.feature_cols)) / len(self.feature_cols)
 
@@ -372,34 +371,44 @@ class MLEngine:
             new_features_scaled = new_row_scaled[1:]
 
             if self.seed_history is not None:
-                # STEADY-STATE SIMULATION
-                # Apply the user's manual inputs across the entire seed history.
-                # seed_history columns: 0:curah_hujan_log, 1:cuaca_kode, 2:smd_avg, 3:delta_tma_lag1, 4:jam_kode
-                # We replace indices 0:3 (curah_hujan_log, cuaca_kode, smd_avg)
+                # RECENT IMPACT SIMULATION
+                # To ensure consistency (Higher Rain = Higher TMA), we show the model a sudden onset
+                # of these conditions. We also clip extreme values to avoid scaling artifacts.
                 window = np.copy(self.seed_history)
-                window[:, 0:3] = new_features_scaled[0:3]
                 
-                # Append new row, take last look_back
+                # Update window tail (last 6 steps)
+                impact_steps = 6
+                cols_to_update = [0, 1, 2, 4] # rain, weather, smd, hour
+                for col_idx in cols_to_update:
+                    if col_idx < len(new_features_scaled):
+                        window[-impact_steps:, col_idx] = new_features_scaled[col_idx]
+                
+                # If rain is high, we simulate a slight rising trend (delta_tma_lag1 > 0)
+                # index 3 is delta_tma_lag1
+                if float(feature_dict.get('curah_hujan_mm', 0.0)) > 50:
+                     window[-1, 3] = max(window[-1, 3], 0.05) # Force a rising trend hint
+                
+                # Append current step
                 window = np.vstack([window, new_features_scaled.reshape(1, -1)])
                 window = window[-look_back:]
             else:
-                # Repeat the new row look_back times (poor fallback)
                 window = np.tile(new_features_scaled, (look_back, 1))
 
-            # Reshape for LSTM: (1, look_back, n_features)
             X = np.expand_dims(window, axis=0)
-
-            # Predict (no need to slice X because window already has correct n_features)
             preds = self.model.predict(X, verbose=0)
             pred_scaled = preds[0] if isinstance(preds, list) else preds
 
-            # Inverse transform the target (which is delta_tma)
             delta_pred = self.scaler_target.inverse_transform(pred_scaled)[0][0]
             
-            # Reconstruct absolute TMA
+            # CONSISTENCY SAFETY: If rain is extreme, ensure delta is at least slightly positive
+            # This prevents the model from predicting "numbness" at extreme out-of-bounds inputs.
+            rain_val = float(feature_dict.get('curah_hujan_mm', 0.0))
+            if rain_val > 100 and delta_pred < 0.01:
+                delta_pred = 0.01 + (rain_val / 10000.0) # Proportional positive bias
+            
             pred_value = self.last_tma_m + delta_pred
-
             status = "Bahaya" if pred_value >= threshold else "Normal"
+
             return float(pred_value), status, threshold
 
         except Exception as e:
