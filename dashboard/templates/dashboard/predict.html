@@ -65,8 +65,15 @@
                 <div class="absolute inset-0 bg-error-container/5 pointer-events-none"></div>
             {% endif %}
             <div class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-4 z-10">Hasil Prediksi</div>
-            <div class="font-display-lg text-[48px] text-on-surface font-bold tracking-tighter mb-6 z-10" id="result-value">
-                {{ result }} <span class="text-2xl text-on-surface-variant">m</span>
+            
+            <!-- Gauge Chart Container -->
+            <div class="relative w-48 h-24 mb-6 z-10">
+                <canvas id="gaugeChart"></canvas>
+                <div class="absolute inset-0 flex flex-col items-center justify-end pb-1">
+                    <div class="font-display-lg text-[32px] text-on-surface font-bold tracking-tighter" id="result-value">
+                        {{ result }}<span class="text-lg text-on-surface-variant ml-1">m</span>
+                    </div>
+                </div>
             </div>
             
             {% if result_status == 'Bahaya' %}
@@ -104,6 +111,47 @@
             theme: "dark",
             placeholder: "Pilih Waktu..."
         });
+
+        // Gauge Chart for Prediction Result
+        {% if result %}
+        const ctx = document.getElementById('gaugeChart').getContext('2d');
+        const value = {{ result|default:0 }};
+        const threshold = {{ threshold|default:88.3 }};
+        
+        // Define ranges: 80m to 95m (typical Bajulmati range)
+        const minVal = 85; 
+        const maxVal = 90;
+        
+        // Normalize value for doughnut (0 to 180 degrees)
+        // We'll use a doughnut chart with circumfrence 180
+        const dataValue = Math.min(Math.max(value, minVal), maxVal);
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [dataValue - minVal, maxVal - dataValue],
+                    backgroundColor: [
+                        value >= threshold ? '#ff4b4b' : '#4a7cff',
+                        'rgba(255, 255, 255, 0.05)'
+                    ],
+                    borderWidth: 0,
+                    circumference: 180,
+                    rotation: 270,
+                    borderRadius: 10,
+                    cutout: '85%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+        {% endif %}
     });
 </script>
 {% endblock %}
