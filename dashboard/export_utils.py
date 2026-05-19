@@ -76,8 +76,8 @@ def export_history_to_pdf(request):
 
     # --- Analytics ---
     total = len(records)
-    danger_count = sum(1 for r in records if r.status == 'Bahaya')
-    normal_count = sum(1 for r in records if r.status == 'Normal')
+    danger_count = sum(1 for r in records if r.status in ['Bahaya', 'Darurat'])
+    normal_count = sum(1 for r in records if r.status in ['Normal', 'Waspada'])
     danger_pct = (danger_count / total * 100) if total > 0 else 0
 
     tma_values = [r.tma_predicted for r in records if r.tma_predicted]
@@ -208,7 +208,7 @@ def export_history_to_pdf(request):
     else:
         lines.append(
             f"Dari <b>{total:,}</b> data prediksi yang dianalisis, ditemukan <b>{danger_count:,} record "
-            f"({danger_pct:.1f}%)</b> berstatus <b>BAHAYA</b> dan <b>{normal_count:,} record</b> berstatus <b>NORMAL</b>."
+            f"({danger_pct:.1f}%)</b> berstatus <b>BAHAYA/DARURAT</b> dan <b>{normal_count:,} record</b> berstatus <b>NORMAL/WASPADA</b>."
         )
         if tma_avg > 0:
             lines.append(
@@ -261,7 +261,7 @@ def export_history_to_pdf(request):
 
     display = records[:500]
     for i, p in enumerate(display, 1):
-        is_d = p.status == 'Bahaya'
+        is_d = p.status in ['Bahaya', 'Darurat']
         obs = p.waktu.strftime('%d/%m/%Y %H:%M') if p.waktu else '-'
         pred_time = p.created_at.strftime('%d/%m/%Y %H:%M')
         tbl_data.append([
@@ -296,7 +296,7 @@ def export_history_to_pdf(request):
     ])
     # Danger row highlight
     for i, p in enumerate(display, 1):
-        if p.status == 'Bahaya':
+        if p.status in ['Bahaya', 'Darurat']:
             ts.add('BACKGROUND', (0, i), (-1, i), DANGER_ROW)
     # "More rows" note spans all columns
     if len(records) > 500:

@@ -295,9 +295,8 @@ class MLEngine:
         return 90
 
     def get_threshold(self):
-        if self.metadata and 'threshold' in self.metadata:
-            return self.metadata['threshold']
-        return 88.3794
+        # Hardcoded to match the user's requested Bahaya threshold
+        return 87.60
 
     def get_model_metrics(self):
         """Return model performance metrics from metadata."""
@@ -407,7 +406,15 @@ class MLEngine:
                 delta_pred = 0.01 + (rain_val / 10000.0) # Proportional positive bias
             
             pred_value = self.last_tma_m + delta_pred
-            status = "Bahaya" if pred_value >= threshold else "Normal"
+            # Evaluate Status
+            if pred_value < 87.3:
+                status = "Normal"
+            elif pred_value < 87.60:
+                status = "Waspada"
+            elif pred_value < 91.80:
+                status = "Bahaya"
+            else:
+                status = "Darurat"
 
             return float(pred_value), status, threshold
 
@@ -528,9 +535,13 @@ class MLEngine:
 
         if not self.is_loaded or self.model is None:
             df['tma_predicted'] = np.random.uniform(85, 90, size=len(df))
-            df['status'] = df['tma_predicted'].apply(
-                lambda x: "Bahaya" if x >= threshold else "Normal"
-            )
+            def get_status(x):
+                if x < 87.3: return "Normal"
+                if x < 87.60: return "Waspada"
+                if x < 91.80: return "Bahaya"
+                return "Darurat"
+                
+            df['status'] = df['tma_predicted'].apply(get_status)
             return df
 
         try:
@@ -605,9 +616,16 @@ class MLEngine:
                     pred_val = prev_actual + delta_pred
                     
                     df.iloc[idx, df.columns.get_loc('tma_predicted')] = float(pred_val)
-                    df.iloc[idx, df.columns.get_loc('status')] = (
-                        "Bahaya" if pred_val >= threshold else "Normal"
-                    )
+                    if pred_val < 87.3:
+                        status_val = "Normal"
+                    elif pred_val < 87.60:
+                        status_val = "Waspada"
+                    elif pred_val < 91.80:
+                        status_val = "Bahaya"
+                    else:
+                        status_val = "Darurat"
+                        
+                    df.iloc[idx, df.columns.get_loc('status')] = status_val
 
             return df
 
@@ -651,7 +669,14 @@ class MLEngine:
             # Add a human readable status based on current threshold
             th = self.get_threshold()
             for r in result:
-                r['status'] = 'Bahaya' if r['tma_m'] >= th else 'Normal'
+                if r['tma_m'] < 87.3:
+                    r['status'] = 'Normal'
+                elif r['tma_m'] < 87.60:
+                    r['status'] = 'Waspada'
+                elif r['tma_m'] < 91.80:
+                    r['status'] = 'Bahaya'
+                else:
+                    r['status'] = 'Darurat'
                 
             return result
         except Exception as e:

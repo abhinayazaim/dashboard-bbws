@@ -18,7 +18,7 @@
     "jam_kode"
   ],
   "target_col": "delta_tma",
-  "threshold": 87.63,
+  "threshold": 87.60,
   "threshold_method": "percentile_90_full_dataset",
   "reconstruction": "1-step-ahead teacher forcing: tma_pred(t) = tma_actual(t-1) + delta_pred(t)",
   "train_end_date": "2023-10-29",

@@ -50,6 +50,81 @@
     </form>
 </div>
 
+<!-- Master Prompt Guide -->
+<div class="bg-[#1e1e1e] border border-[#333333] rounded-lg p-lg mb-lg">
+    <div class="flex justify-between items-start mb-md">
+        <div>
+            <h3 class="font-h2 text-h2 text-on-surface">Panduan Penyiapan Data dengan AI</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Gunakan prompt di bawah ini untuk meminta bantuan AI (seperti ChatGPT atau Gemini) agar mengubah format laporan mentah (Excel) Anda menjadi dataset CSV yang siap diunggah ke sistem ini.</p>
+        </div>
+        <button type="button" onclick="copyPrompt()" class="bg-[#1F3864] text-[#e0e0e0] px-4 py-2 rounded hover:bg-primary-container/90 transition-colors font-body-sm flex items-center gap-2 shrink-0">
+            <span class="material-symbols-outlined text-[18px]">content_copy</span>
+            Salin Prompt
+        </button>
+    </div>
+    <div class="bg-[#121212] border border-[#333333] rounded p-4 relative">
+        <pre id="master-prompt" class="font-data-mono text-data-mono text-on-surface text-sm whitespace-pre-wrap overflow-x-auto">kamu adalah data engineer dan asisten ai untuk sistem prediksi tinggi muka air (tma) bendungan bajulmati. user akan melampirkan beberapa file sekaligus. tugasmu adalah mengeksekusi kode python (pandas) untuk memproses file mentah menjadi data siap pakai untuk model lstm.
+
+sebelum mulai, kenali dan bedakan peran dari file-file yang dilampirkan:
+
+file acuan (contoh): file yang memiliki nama 'bajulmati_dataset_2018_2026_imputed' (berupa csv). file ini HANYA berfungsi sebagai cetak biru (blueprint) atau kamus. baca file ini hanya untuk meniru persis urutan kolomnya, tipe datanya, format datetime, dan aturan nilainya. JANGAN memodifikasi, memproses, atau menggabungkan isi file ini ke output akhir.
+
+file target (data mentah): file excel laporan bulanan bendungan bajulmati (biasanya berformat .xlsx). ini adalah satu-satunya file yang HARUS kamu proses, ekstrak datanya, dan ubah strukturnya.
+
+berikut adalah aturan pemrosesan yang harus kamu terapkan HANYA pada file target (file excel laporan bulanan) agar outputnya persis seperti file acuan:
+
+ekstraksi data waktu (datetime):
+ambil data pembacaan setiap hari pada jam 07:00, 12:00, dan 17:00.
+buat satu kolom 'datetime' dengan format yyyy-mm-dd hh:mm.
+
+ekstraksi variabel utama (sesuaikan nama sheet jika ada sedikit variasi):
+tma_m: ambil nilai tinggi muka air (hulu) dari sheet 'tma' pada masing-masing jam tersebut.
+curah_hujan_mm: ambil data curah hujan dari sheet 'arl' atau 'curah hujan' dan sesuaikan dengan waktu baca.
+cuaca & cuaca_kode: ambil kondisi cuaca dari sheet 'tma'. buat 'cuaca_kode' dengan aturan pasti: cerah=1, berawan=2, mendung=3, hujan=4.
+smd_kanan_q_ls & smd_kiri_q_ls: ambil debit rembesan dari sheet 'v-notch'. karena v-notch dibaca sehari sekali, gunakan metode forward fill (ffill) untuk mengisi nilainya di jam 07:00, 12:00, dan 17:00 pada hari tersebut.
+
+feature engineering (fitur waktu & historis):
+jam_kode: ambil jam dari datetime (7, 12, atau 17).
+bulan: nama bulan (contoh: desember).
+tahun: tahun dari data (contoh: 2026).
+tma_lag1, tma_lag2, tma_lag3: buat fitur histori nilai tma pada 1, 2, dan 3 langkah waktu pembacaan sebelumnya menggunakan fungsi shift.
+delta_tma: selisih antara tma_m saat ini dikurangi tma_lag1.
+tma_rolling_mean_3: hitung nilai rata-rata bergerak (rolling mean) dari tma untuk 3 waktu terakhir.
+
+aturan imputasi (penanganan nilai null):
+output akhir tidak boleh mengandung nilai null, nan, atau kosong sama sekali.
+jika tma_m, curah hujan, atau smd kosong, lakukan imputasi dengan interpolasi linear atau forward fill.
+buat kolom 'flag_curah_hujan_imputed' dan 'flag_smd_imputed'. isi nilai 0 jika data asli, dan 1 jika hasil imputasi paksa.
+untuk baris paling awal bulan tersebut yang fitur lag-nya kosong (karena tidak ada data bulan sebelumnya untuk ditarik), gunakan backfill (bfill) dari data tma terdekat yang tersedia di bulan tersebut agar tidak error saat diprediksi.
+
+format output akhir (pastikan persis dengan file acuan):
+jalankan script python pandas di latar belakang untuk melakukan semua transformasi ini.
+output 1: file excel (.xlsx) berisi data khusus bulan tersebut yang sudah rapi dan terstruktur.
+output 2: file .csv dengan nama 'bajulmati_lstm_dataset_[bulan]_[tahun].csv' khusus untuk data bulan tersebut.
+
+pastikan urutan kolom, penamaan kolom, dan format isinya 100% identik dengan struktur di file 'bajulmati_dataset_2018_2026_imputed'.
+
+tolong kerjakan sekarang, jadikan file imputed sebagai panduan struktur, dan keluarkan dua file output (excel dan csv) dari file laporan bulanan mentahnya.</pre>
+    </div>
+</div>
+
+<script>
+function copyPrompt() {
+    const promptText = document.getElementById('master-prompt').innerText;
+    navigator.clipboard.writeText(promptText).then(function() {
+        const btn = document.querySelector('button[onclick="copyPrompt()"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check</span> Tersalin!';
+        btn.classList.replace('bg-[#1F3864]', 'bg-[#27a644]');
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.replace('bg-[#27a644]', 'bg-[#1F3864]');
+        }, 2000);
+    });
+}
+</script>
+
+
 <!-- Preview Data Section (Only visible after upload if we want, or just show the result table) -->
 {% if result_df is not None %}
 <div class="bg-[#1e1e1e] border border-[#333333] rounded-lg overflow-hidden mb-lg">
@@ -72,15 +147,19 @@
             </thead>
             <tbody class="font-data-mono text-data-mono text-on-surface">
                 {% for row in preview_data %}
-                <tr class="border-b border-[#333333] hover:bg-[#2a2a2a] transition-colors {% if row.status == 'Bahaya' %}bg-error-container/10{% endif %}">
+                <tr class="border-b border-[#333333] hover:bg-[#2a2a2a] transition-colors {% if row.status == 'Darurat' or row.status == 'Bahaya' %}bg-error-container/10{% elif row.status == 'Waspada' %}bg-yellow-900/10{% endif %}">
                     <td class="p-sm text-on-surface-variant">{{ row.waktu }}</td>
                     <td class="p-sm">{{ row.curah_hujan_mm|floatformat:2 }}</td>
                     <td class="p-sm text-right">{{ row.smd_kanan_q_ls|floatformat:2 }}</td>
                     <td class="p-sm text-right">{{ row.smd_kiri_q_ls|floatformat:2 }}</td>
-                    <td class="p-sm text-right {% if row.status == 'Bahaya' %}text-error font-bold{% endif %}">{{ row.tma_predicted|floatformat:3 }}</td>
+                    <td class="p-sm text-right {% if row.status == 'Darurat' or row.status == 'Bahaya' %}text-error font-bold{% elif row.status == 'Waspada' %}text-orange-400 font-bold{% endif %}">{{ row.tma_predicted|floatformat:3 }}</td>
                     <td class="p-sm text-center">
-                        {% if row.status == 'Bahaya' %}
+                        {% if row.status == 'Darurat' %}
+                        <span class="inline-block bg-[#b91c1c] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest pulse-bahaya">DARURAT</span>
+                        {% elif row.status == 'Bahaya' %}
                         <span class="inline-block bg-[#dc3545] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest pulse-bahaya">BAHAYA</span>
+                        {% elif row.status == 'Waspada' %}
+                        <span class="inline-block bg-[#f59e0b] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest">WASPADA</span>
                         {% else %}
                         <span class="inline-block bg-secondary-container/20 text-secondary border border-secondary/50 font-label-caps text-[10px] px-2 py-1 rounded tracking-widest">NORMAL</span>
                         {% endif %}

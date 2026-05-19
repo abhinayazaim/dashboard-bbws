@@ -59,9 +59,9 @@
     </div>
 
     <!-- Result Box (4 cols) -->
-    <div class="lg:col-span-4 bg-surface-container border-t-2 {% if result_status == 'Bahaya' %}border-error{% else %}border-primary{% endif %} border-x border-b border-outline-variant rounded p-lg flex flex-col items-center justify-center min-h-[300px] shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative overflow-hidden">
+    <div class="lg:col-span-4 bg-surface-container border-t-2 {% if result_status == 'Darurat' or result_status == 'Bahaya' %}border-error{% elif result_status == 'Waspada' %}border-orange-500{% else %}border-primary{% endif %} border-x border-b border-outline-variant rounded p-lg flex flex-col items-center justify-center min-h-[300px] shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative overflow-hidden">
         {% if result %}
-            {% if result_status == 'Bahaya' %}
+            {% if result_status == 'Darurat' or result_status == 'Bahaya' %}
                 <div class="absolute inset-0 bg-error-container/5 pointer-events-none"></div>
             {% endif %}
             <div class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-4 z-10">Hasil Prediksi</div>
@@ -76,8 +76,16 @@
                 </div>
             </div>
             
-            {% if result_status == 'Bahaya' %}
+            {% if result_status == 'Darurat' %}
+            <div class="px-6 py-2 bg-[#b91c1c] text-white rounded text-lg font-bold pulse-bahaya tracking-widest z-10 uppercase">
+                {{ result_status }}
+            </div>
+            {% elif result_status == 'Bahaya' %}
             <div class="px-6 py-2 bg-[#dc3545] text-white rounded text-lg font-bold pulse-bahaya tracking-widest z-10 uppercase">
+                {{ result_status }}
+            </div>
+            {% elif result_status == 'Waspada' %}
+            <div class="px-6 py-2 bg-[#f59e0b] text-white rounded text-lg font-bold tracking-widest z-10 uppercase">
                 {{ result_status }}
             </div>
             {% else %}
@@ -126,13 +134,15 @@
         // We'll use a doughnut chart with circumfrence 180
         const dataValue = Math.min(Math.max(value, minVal), maxVal);
         
+        const chartColor = value >= 91.80 ? '#b91c1c' : value >= 87.60 ? '#ff4b4b' : value >= 87.30 ? '#f59e0b' : '#4a7cff';
+
         new Chart(ctx, {
             type: 'doughnut',
             data: {
                 datasets: [{
                     data: [dataValue - minVal, maxVal - dataValue],
                     backgroundColor: [
-                        value >= threshold ? '#ff4b4b' : '#4a7cff',
+                        chartColor,
                         'rgba(255, 255, 255, 0.05)'
                     ],
                     borderWidth: 0,

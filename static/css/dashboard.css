@@ -243,8 +243,10 @@ body {
     letter-spacing: 0.5px;
 }
 .badge-normal { background: rgba(34, 197, 94, 0.15); color: var(--accent-green); border: 1px solid rgba(34, 197, 94, 0.3); }
+.badge-waspada { background: rgba(245, 158, 11, 0.15); color: var(--accent-orange); border: 1px solid rgba(245, 158, 11, 0.3); }
 .badge-bahaya { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3); }
-.badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--accent-orange); border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-darurat { background: rgba(185, 28, 28, 0.15); color: #dc2626; border: 1px solid rgba(185, 28, 28, 0.3); }
+.badge-pending { background: rgba(139, 145, 168, 0.15); color: var(--text-secondary); border: 1px solid rgba(139, 145, 168, 0.3); }
 
 /* ── Forms ── */
 .form-group { margin-bottom: 16px; }
@@ -332,8 +334,12 @@ select.form-input { cursor: pointer; appearance: auto; }
 .result-card .result-badge .badge { font-size: 13px; padding: 6px 20px; }
 .result-card.normal { border-color: rgba(34, 197, 94, 0.3); }
 .result-card.normal .result-value { color: var(--accent-green); }
+.result-card.waspada { border-color: rgba(245, 158, 11, 0.3); }
+.result-card.waspada .result-value { color: var(--accent-orange); }
 .result-card.bahaya { border-color: rgba(239, 68, 68, 0.3); }
 .result-card.bahaya .result-value { color: var(--accent-red); }
+.result-card.darurat { border-color: rgba(185, 28, 28, 0.3); }
+.result-card.darurat .result-value { color: #dc2626; }
 
 /* ── Upload Zone ── */
 .upload-zone {

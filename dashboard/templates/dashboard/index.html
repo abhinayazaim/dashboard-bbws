@@ -112,7 +112,7 @@
         <!-- KPI 3 -->
         <div
             class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
-            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Status BAHAYA</div>
+            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Status BAHAYA / DARURAT</div>
             <div class="flex items-baseline gap-2">
                 <div class="font-display-lg text-display-lg text-error {% if danger_count > 0 %}pulse-bahaya{% endif %} inline-block">
                     {{ danger_count }}</div>
@@ -172,18 +172,20 @@
                     <tbody class="font-data-mono text-data-mono">
                         {% for p in last_4 %}
                         <tr
-                            class="border-b border-outline-variant/50 {% if p.status == 'Bahaya' %}bg-error-container/10{% endif %}">
+                            class="border-b border-outline-variant/50 {% if p.status == 'Darurat' or p.status == 'Bahaya' %}bg-error-container/10{% elif p.status == 'Waspada' %}bg-yellow-900/10{% endif %}">
                             <td class="py-3 px-3 text-on-surface">{{ p.created_at|date:"d M H:i" }}</td>
                             <td
-                                class="py-3 px-3 {% if p.status == 'Bahaya' %}font-bold text-error{% else %}text-on-surface{% endif %}">
+                                class="py-3 px-3 {% if p.status == 'Darurat' or p.status == 'Bahaya' %}font-bold text-error{% elif p.status == 'Waspada' %}font-bold text-orange-400{% else %}text-on-surface{% endif %}">
                                 {{ p.tma_predicted|floatformat:3 }}</td>
                             <td class="py-3 px-3">
-                                {% if p.status == 'Bahaya' %}
-                                <span
-                                    class="px-2 py-1 bg-[#dc3545] text-white rounded text-xs font-bold pulse-bahaya uppercase tracking-widest">BAHAYA</span>
+                                {% if p.status == 'Darurat' %}
+                                <span class="px-2 py-1 bg-[#b91c1c] text-white rounded text-xs font-bold pulse-bahaya uppercase tracking-widest">DARURAT</span>
+                                {% elif p.status == 'Bahaya' %}
+                                <span class="px-2 py-1 bg-[#dc3545] text-white rounded text-xs font-bold pulse-bahaya uppercase tracking-widest">BAHAYA</span>
+                                {% elif p.status == 'Waspada' %}
+                                <span class="px-2 py-1 bg-[#f59e0b] text-white rounded text-xs font-bold uppercase tracking-widest">WASPADA</span>
                                 {% else %}
-                                <span
-                                    class="px-2 py-1 bg-secondary-container/20 text-secondary border border-secondary/50 rounded text-xs font-bold uppercase tracking-widest">NORMAL</span>
+                                <span class="px-2 py-1 bg-secondary-container/20 text-secondary border border-secondary/50 rounded text-xs font-bold uppercase tracking-widest">NORMAL</span>
                                 {% endif %}
                             </td>
                         </tr>

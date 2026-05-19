@@ -202,10 +202,6 @@
     <header class="fixed top-0 right-0 left-64 flex justify-between items-center px-8 h-16 z-30 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800">
         <h2 class="font-h2 text-h2 text-on-surface font-semibold tracking-tight hidden sm:block">Sistem Prediksi Hidrologi</h2>
         <div class="flex items-center gap-4 relative">
-            <button id="btn-notifications" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors text-on-surface-variant relative group">
-                <span class="material-symbols-outlined text-xl">notifications</span>
-                <span class="absolute top-2 right-2 w-2 h-2 bg-[#dc3545] rounded-full"></span>
-            </button>
             <button id="btn-settings" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors text-on-surface-variant">
                 <span class="material-symbols-outlined text-xl">settings</span>
             </button>
@@ -256,35 +252,6 @@
         </div>
     </div>
 
-    <!-- Notification Dropdown -->
-    <div id="dropdown-notifications" class="fixed top-16 right-8 z-50 w-80 bg-surface-container border border-outline-variant rounded-xl shadow-2xl hidden opacity-0 transition-opacity duration-200">
-        <div class="p-4 border-b border-outline-variant/50 flex justify-between items-center">
-            <h3 class="font-h2 text-h2 text-on-surface">Notifikasi</h3>
-            <span class="text-xs text-primary cursor-pointer hover:underline">Tandai sudah dibaca</span>
-        </div>
-        <div class="max-h-64 overflow-y-auto">
-            <div class="p-4 border-b border-outline-variant/30 hover:bg-surface-container-highest cursor-pointer">
-                <div class="flex gap-3">
-                    <span class="material-symbols-outlined text-error">warning</span>
-                    <div>
-                        <p class="text-sm text-on-surface">Peringatan: Potensi TMA Ekstrem</p>
-                        <p class="text-xs text-on-surface-variant mt-1">Prediksi menunjukkan lonjakan TMA dalam 24 jam ke depan.</p>
-                        <p class="text-xs text-outline mt-2">10 menit yang lalu</p>
-                    </div>
-                </div>
-            </div>
-            <div class="p-4 hover:bg-surface-container-highest cursor-pointer">
-                <div class="flex gap-3">
-                    <span class="material-symbols-outlined text-primary">update</span>
-                    <div>
-                        <p class="text-sm text-on-surface">Pembaruan Model Selesai</p>
-                        <p class="text-xs text-on-surface-variant mt-1">LSTM-Attn v2.0 telah dimuat dan siap digunakan.</p>
-                        <p class="text-xs text-outline mt-2">1 jam yang lalu</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Settings Modal -->
     <div id="modal-settings" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
@@ -294,16 +261,6 @@
                 <button class="close-modal text-on-surface-variant hover:text-white"><span class="material-symbols-outlined">close</span></button>
             </div>
             <div class="space-y-4 font-body-md text-on-surface-variant">
-                <div class="flex justify-between items-center border-b border-outline-variant/30 pb-4">
-                    <div>
-                        <p class="text-on-surface font-medium">Notifikasi Bahaya</p>
-                        <p class="text-xs text-outline">Terima peringatan saat TMA melewati batas</p>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" value="" class="sr-only peer" checked>
-                        <div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                </div>
                 <div class="flex justify-between items-center pb-2">
                     <div>
                         <p class="text-on-surface font-medium">Ambang Batas Bahaya (m)</p>
@@ -403,7 +360,6 @@
             document.getElementById('btn-status-sistem')?.addEventListener('click', (e) => { e.preventDefault(); openModal('modal-status'); });
             document.getElementById('btn-settings')?.addEventListener('click', () => openModal('modal-settings'));
             document.getElementById('btn-help')?.addEventListener('click', () => openModal('modal-help'));
-            document.getElementById('btn-notifications')?.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown('dropdown-notifications'); });
 
             // Close buttons
             document.querySelectorAll('.close-modal').forEach(btn => {
@@ -422,12 +378,6 @@
 
             // Close dropdown on click outside
             document.addEventListener('click', (e) => {
-                const drop = document.getElementById('dropdown-notifications');
-                const btn = document.getElementById('btn-notifications');
-                if (drop && !drop.classList.contains('hidden') && !drop.contains(e.target) && !btn.contains(e.target)) {
-                    drop.classList.add('opacity-0');
-                    setTimeout(() => drop.classList.add('hidden'), 200);
-                }
             });
         });
     </script>

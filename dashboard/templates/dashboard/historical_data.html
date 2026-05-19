@@ -50,10 +50,20 @@
                         <td class="py-md px-margin font-body-sm text-on-surface">{{ row.smd_kanan_q_ls|floatformat:1 }}</td>
                         <td class="py-md px-margin font-body-sm text-on-surface">{{ row.smd_kiri_q_ls|floatformat:1 }}</td>
                         <td class="py-md px-margin">
-                            {% if row.status == 'Bahaya' %}
+                            {% if row.status == 'Darurat' %}
+                                <span class="bg-error/20 text-[#ffb4ab] border border-error/30 px-3 py-1 rounded-full text-xs font-semibold tracking-wide inline-flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+                                    DARURAT
+                                </span>
+                            {% elif row.status == 'Bahaya' %}
                                 <span class="bg-error/20 text-[#ffb4ab] border border-error/30 px-3 py-1 rounded-full text-xs font-semibold tracking-wide inline-flex items-center gap-1">
                                     <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
                                     BAHAYA
+                                </span>
+                            {% elif row.status == 'Waspada' %}
+                                <span class="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-3 py-1 rounded-full text-xs font-semibold tracking-wide inline-flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                                    WASPADA
                                 </span>
                             {% else %}
                                 <span class="bg-[#1b3b2b] text-[#81c995] border border-[#234d38] px-3 py-1 rounded-full text-xs font-semibold tracking-wide inline-flex items-center gap-1">

@@ -51,7 +51,7 @@ def index_view(request):
     total_predictions = PredictionRecord.objects.count()
     today = timezone.now().date()
     today_predictions = PredictionRecord.objects.filter(created_at__date=today).count()
-    danger_count = PredictionRecord.objects.filter(status='Bahaya').count()
+    danger_count = PredictionRecord.objects.filter(status__in=['Bahaya', 'Darurat']).count()
 
     # Last 50 for chart
     # Order by created_at then id to keep batch rows in sequence even if created at same second
@@ -242,7 +242,9 @@ def batch_predict_view(request):
 
                 # Bulk create prediction records
                 records = []
+                darurat_count = 0
                 danger_count = 0
+                waspada_count = 0
                 normal_count = 0
 
                 # Identify time column from original df BEFORE preprocessing
@@ -256,8 +258,12 @@ def batch_predict_view(request):
 
                 for _, row in result_df.iterrows():
                     pred_status = row.get('status', 'Pending')
-                    if pred_status == 'Bahaya':
+                    if pred_status == 'Darurat':
+                        darurat_count += 1
+                    elif pred_status == 'Bahaya':
                         danger_count += 1
+                    elif pred_status == 'Waspada':
+                        waspada_count += 1
                     elif pred_status == 'Normal':
                         normal_count += 1
 
@@ -298,13 +304,13 @@ def batch_predict_view(request):
 
                 PredictionRecord.objects.bulk_create(records)
 
-                session.danger_count = danger_count
-                session.normal_count = normal_count
+                session.danger_count = danger_count + darurat_count # aggregate danger for session
+                session.normal_count = normal_count + waspada_count
                 session.save()
 
                 messages.success(
                     request,
-                    f'Batch berhasil diproses: {normal_count} Normal, {danger_count} Bahaya.'
+                    f'Batch berhasil diproses: {normal_count} Normal, {waspada_count} Waspada, {danger_count} Bahaya, {darurat_count} Darurat.'
                 )
                 return redirect('history')
 
@@ -320,22 +326,16 @@ def history_view(request):
     """Prediction history page with filters."""
     query = PredictionRecord.objects.all()
 
-    # Date range filter
-    date_from = request.GET.get('date_from', '')
-    date_to = request.GET.get('date_to', '')
+    # Filters
+    year_filter = request.GET.get('year', '')
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('q', '')
     
-    if date_from:
+    if year_filter and year_filter != 'all':
         try:
-            from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
-            query = query.filter(created_at__date__gte=from_date)
-        except ValueError:
-            pass
-    if date_to:
-        try:
-            to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
-            query = query.filter(created_at__date__lte=to_date)
+            year_int = int(year_filter)
+            # Filter by observation time (waktu) year
+            query = query.filter(waktu__year=year_int)
         except ValueError:
             pass
             
@@ -344,8 +344,9 @@ def history_view(request):
         
     if search_query:
         try:
-            obs_date = datetime.strptime(search_query, '%Y-%m-%d').date()
-            query = query.filter(waktu__date=obs_date)
+            obs_date = datetime.strptime(search_query, '%Y-%m-%d')
+            obs_date_end = obs_date.replace(hour=23, minute=59, second=59)
+            query = query.filter(waktu__gte=obs_date, waktu__lte=obs_date_end)
         except ValueError:
             # If not a valid date, fall back to text search on source/status
             query = query.filter(
@@ -361,8 +362,7 @@ def history_view(request):
     context = {
         'page_obj': page_obj,
         'total_count': total_count,
-        'date_from': date_from,
-        'date_to': date_to,
+        'year_filter': year_filter,
         'status_filter': status_filter,
         'search_query': search_query,
     }
