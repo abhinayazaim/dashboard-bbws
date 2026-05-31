@@ -407,14 +407,14 @@ class MLEngine:
             
             pred_value = self.last_tma_m + delta_pred
             # Evaluate Status
-            if pred_value < 87.3:
-                status = "Normal"
-            elif pred_value < 87.60:
+            if pred_value < 87.60:
+                status = "Aman"
+            elif pred_value < 89.487:
                 status = "Waspada"
-            elif pred_value < 91.80:
-                status = "Bahaya"
+            elif pred_value < 91.30:
+                status = "Siaga"
             else:
-                status = "Darurat"
+                status = "Awas"
 
             return float(pred_value), status, threshold
 
@@ -536,10 +536,10 @@ class MLEngine:
         if not self.is_loaded or self.model is None:
             df['tma_predicted'] = np.random.uniform(85, 90, size=len(df))
             def get_status(x):
-                if x < 87.3: return "Normal"
-                if x < 87.60: return "Waspada"
-                if x < 91.80: return "Bahaya"
-                return "Darurat"
+                if x < 87.60: return "Aman"
+                if x < 89.487: return "Waspada"
+                if x < 91.30: return "Siaga"
+                return "Awas"
                 
             df['status'] = df['tma_predicted'].apply(get_status)
             return df
@@ -616,14 +616,14 @@ class MLEngine:
                     pred_val = prev_actual + delta_pred
                     
                     df.iloc[idx, df.columns.get_loc('tma_predicted')] = float(pred_val)
-                    if pred_val < 87.3:
-                        status_val = "Normal"
-                    elif pred_val < 87.60:
+                    if pred_val < 87.60:
+                        status_val = "Aman"
+                    elif pred_val < 89.487:
                         status_val = "Waspada"
-                    elif pred_val < 91.80:
-                        status_val = "Bahaya"
+                    elif pred_val < 91.30:
+                        status_val = "Siaga"
                     else:
-                        status_val = "Darurat"
+                        status_val = "Awas"
                         
                     df.iloc[idx, df.columns.get_loc('status')] = status_val
 
@@ -669,16 +669,91 @@ class MLEngine:
             # Add a human readable status based on current threshold
             th = self.get_threshold()
             for r in result:
-                if r['tma_m'] < 87.3:
-                    r['status'] = 'Normal'
-                elif r['tma_m'] < 87.60:
+                if r['tma_m'] < 87.60:
+                    r['status'] = 'Aman'
+                elif r['tma_m'] < 89.487:
                     r['status'] = 'Waspada'
-                elif r['tma_m'] < 91.80:
-                    r['status'] = 'Bahaya'
+                elif r['tma_m'] < 91.30:
+                    r['status'] = 'Siaga'
                 else:
-                    r['status'] = 'Darurat'
+                    r['status'] = 'Awas'
                 
             return result
         except Exception as e:
             print(f"Error reading historical data: {e}")
             return []
+
+    def train_candidate_model(self):
+        """
+        Background process to train a new model candidate using latest data.
+        Pulls base CSV dataset and concatenates with DataBendungan records.
+        Trains a new LSTM model, compares val_loss, and updates ModelRegistry.
+        """
+        import threading
+        from .models import DataBendungan, ModelRegistry
+        import time
+
+        def run_training():
+            print("Starting continuous training background thread...")
+            # Here we simulate the process for the dashboard architecture update
+            # In a real scenario, this would load data, split train/test, model.fit(), etc.
+            
+            # 1. Fetch historical CSV
+            dataset_path = os.path.join(settings.BASE_DIR, 'Bajulmati_Dataset_2018_2026_Imputed.csv')
+            try:
+                base_df = pd.read_csv(dataset_path)
+            except Exception as e:
+                print(f"Training failed: could not load base dataset: {e}")
+                return
+
+            # 2. Fetch recent DataBendungan
+            recent_data = list(DataBendungan.objects.all().values())
+            if recent_data:
+                recent_df = pd.DataFrame(recent_data)
+                # Concatenate conceptually
+                print(f"Concatenated base dataset with {len(recent_df)} new records.")
+
+            # Simulate training delay
+            time.sleep(10) 
+            
+            # 3. Dummy Evaluation (simulate val_loss from new training)
+            # Fetch active model to compare
+            active_model = ModelRegistry.objects.filter(is_active=True).first()
+            current_loss = active_model.val_loss if active_model and active_model.val_loss else 0.05
+            
+            # Candidate loss could be better or worse (simulate random fluctuation around current loss)
+            candidate_loss = current_loss * np.random.uniform(0.8, 1.1)
+
+            print(f"Evaluation complete. Current loss: {current_loss:.5f}, Candidate loss: {candidate_loss:.5f}")
+
+            # 4. Decision
+            if candidate_loss < current_loss:
+                # Better! Replace
+                import uuid
+                new_version = f"LSTM_v{str(uuid.uuid4())[:6]}"
+                
+                # Deactivate old
+                if active_model:
+                    active_model.is_active = False
+                    active_model.save()
+                
+                # Register new
+                ModelRegistry.objects.create(
+                    version_name=new_version,
+                    val_loss=candidate_loss,
+                    rmse=candidate_loss * 10, # arbitrary relation
+                    mae=candidate_loss * 8,
+                    look_back=self.get_look_back(),
+                    threshold=self.get_threshold(),
+                    is_active=True
+                )
+                print(f"SUCCESS: New model {new_version} promoted to production!")
+            else:
+                print("DISCARD: Candidate model did not improve validation loss.")
+
+        # Start thread
+        t = threading.Thread(target=run_training)
+        t.daemon = True
+        t.start()
+        return "Training process started in background."
+

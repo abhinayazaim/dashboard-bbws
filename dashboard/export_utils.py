@@ -2,12 +2,12 @@ import csv
 import io
 from datetime import datetime
 from django.http import HttpResponse
-from .models import PredictionRecord
+from .models import LogPrediksi
 
 
 def _get_filtered_query(request):
     """Helper to apply common filters from GET params."""
-    query = PredictionRecord.objects.all()
+    query = LogPrediksi.objects.all()
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     status_filter = request.GET.get('status', '')
@@ -76,8 +76,8 @@ def export_history_to_pdf(request):
 
     # --- Analytics ---
     total = len(records)
-    danger_count = sum(1 for r in records if r.status in ['Bahaya', 'Darurat'])
-    normal_count = sum(1 for r in records if r.status in ['Normal', 'Waspada'])
+    danger_count = sum(1 for r in records if r.status in ['Siaga', 'Awas'])
+    normal_count = sum(1 for r in records if r.status in ['Aman', 'Waspada'])
     danger_pct = (danger_count / total * 100) if total > 0 else 0
 
     tma_values = [r.tma_predicted for r in records if r.tma_predicted]
@@ -177,8 +177,8 @@ def export_history_to_pdf(request):
 
     kpi_row = [[
         kpi_cell("TOTAL DATA", f"{total:,}"),
-        kpi_cell("STATUS BAHAYA", f"{danger_count:,}\n({danger_pct:.1f}%)", kpi_danger_s),
-        kpi_cell("STATUS NORMAL", f"{normal_count:,}"),
+        kpi_cell("STATUS SIAGA/AWAS", f"{danger_count:,}\n({danger_pct:.1f}%)", kpi_danger_s),
+        kpi_cell("STATUS AMAN/WASPADA", f"{normal_count:,}"),
         kpi_cell("RATA-RATA TMA (m)", f"{tma_avg:.3f}"),
         kpi_cell("MAKS / MIN (m)", f"{tma_max:.3f} /\n{tma_min:.3f}"),
     ]]
@@ -208,7 +208,7 @@ def export_history_to_pdf(request):
     else:
         lines.append(
             f"Dari <b>{total:,}</b> data prediksi yang dianalisis, ditemukan <b>{danger_count:,} record "
-            f"({danger_pct:.1f}%)</b> berstatus <b>BAHAYA/DARURAT</b> dan <b>{normal_count:,} record</b> berstatus <b>NORMAL/WASPADA</b>."
+            f"({danger_pct:.1f}%)</b> berstatus <b>SIAGA/AWAS</b> dan <b>{normal_count:,} record</b> berstatus <b>AMAN/WASPADA</b>."
         )
         if tma_avg > 0:
             lines.append(
@@ -220,10 +220,10 @@ def export_history_to_pdf(request):
             lines.append(f"Rata-rata curah hujan pada periode ini adalah <b>{rain_avg:.2f} mm</b>.")
 
         if danger_pct > 50:
-            rec = ("<b>PERHATIAN:</b> Lebih dari separuh data (>50%) menunjukkan kondisi BAHAYA. "
+            rec = ("<b>PERHATIAN:</b> Lebih dari separuh data (>50%) menunjukkan kondisi SIAGA/AWAS. "
                    "Diperlukan pemantauan intensif dan tindakan mitigasi segera.")
         elif danger_pct > 20:
-            rec = ("Persentase status BAHAYA cukup signifikan. "
+            rec = ("Persentase status SIAGA/AWAS cukup signifikan. "
                    "Disarankan untuk meningkatkan frekuensi pemantauan pada periode ini.")
         else:
             rec = ("Kondisi umum pada periode ini tergolong aman. "
@@ -261,7 +261,7 @@ def export_history_to_pdf(request):
 
     display = records[:500]
     for i, p in enumerate(display, 1):
-        is_d = p.status in ['Bahaya', 'Darurat']
+        is_d = p.status in ['Siaga', 'Awas']
         obs = p.waktu.strftime('%d/%m/%Y %H:%M') if p.waktu else '-'
         pred_time = p.created_at.strftime('%d/%m/%Y %H:%M')
         tbl_data.append([
@@ -296,7 +296,7 @@ def export_history_to_pdf(request):
     ])
     # Danger row highlight
     for i, p in enumerate(display, 1):
-        if p.status in ['Bahaya', 'Darurat']:
+        if p.status in ['Siaga', 'Awas']:
             ts.add('BACKGROUND', (0, i), (-1, i), DANGER_ROW)
     # "More rows" note spans all columns
     if len(records) > 500:

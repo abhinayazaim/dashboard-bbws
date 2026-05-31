@@ -131,6 +131,37 @@
         .pulse-bahaya, .badge-bahaya {
             animation: pulse-red 1.5s infinite;
         }
+        .status-badge-custom {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-align: center;
+            min-width: 90px;
+        }
+        .status-badge-aman {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #ffffff !important;
+        }
+        .status-badge-waspada {
+            background-color: #28a745 !important;
+            color: #ffffff !important;
+            border: 1px solid #28a745 !important;
+        }
+        .status-badge-siaga {
+            background-color: #c68a00 !important;
+            color: #ffffff !important;
+            border: 1px solid #c68a00 !important;
+        }
+        .status-badge-awas {
+            background-color: #dc3545 !important;
+            color: #ffffff !important;
+            border: 1px solid #dc3545 !important;
+        }
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -162,15 +193,15 @@
         <div class="flex flex-col py-4 gap-2 px-2 flex-grow">
             <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
                 <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'index' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>dashboard</span>
-                Dashboard
+                Beranda
             </a>
-            <a href="{% url 'predict' %}" class="{% if request.resolver_match.url_name == 'predict' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
-                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'predict' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>edit_note</span>
-                Input Manual
+            <a href="{% url 'input_data' %}" class="{% if request.resolver_match.url_name == 'input_data' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
+                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'input_data' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>edit_note</span>
+                Input Data
             </a>
-            <a href="{% url 'batch_predict' %}" class="{% if request.resolver_match.url_name == 'batch_predict' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
-                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'batch_predict' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>upload_file</span>
-                Upload File
+            <a href="{% url 'prediksi' %}" class="{% if request.resolver_match.url_name == 'prediksi' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
+                <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'prediksi' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>upload_file</span>
+                Prediksi (Upload File)
             </a>
             <a href="{% url 'historical_data' %}" class="{% if request.resolver_match.url_name == 'historical_data' %}text-blue-400 font-semibold border-l-4 border-blue-600 bg-blue-950/20{% else %}text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200{% endif %} px-4 py-3 flex items-center gap-3 font-inter antialiased text-sm tracking-tight transition-all duration-150 cursor-pointer rounded">
                 <span class="material-symbols-outlined text-xl"{% if request.resolver_match.url_name == 'historical_data' %} style="font-variation-settings: 'FILL' 1;"{% endif %}>calendar_month</span>
@@ -269,6 +300,16 @@
                     <input type="number" step="0.01" value="{{ global_threshold|floatformat:2 }}" class="bg-surface border border-outline-variant text-on-surface rounded px-3 py-1 w-24 text-center" readonly>
                 </div>
                 
+                
+                <div class="pt-4 border-t border-outline-variant/30">
+                    <p class="text-on-surface font-medium mb-1">Pelatihan Model Lanjutan</p>
+                    <p class="text-xs text-outline mb-3">Latih ulang model di latar belakang menggunakan data terbaru.</p>
+                    <button id="btnRetrainModelSettings" type="button" class="w-full py-2 bg-secondary-container/20 text-secondary border border-secondary/50 rounded hover:bg-secondary hover:text-on-secondary transition-all font-medium flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-sm">model_training</span>
+                        Retrain Model
+                    </button>
+                </div>
+
                 <div class="pt-4 border-t border-outline-variant/30">
                     <p class="text-on-surface font-medium mb-1">Manajemen Data</p>
                     <p class="text-xs text-outline mb-3">Hapus seluruh riwayat prediksi dari database.</p>
@@ -299,7 +340,7 @@
                 <div class="bg-surface p-3 rounded border border-outline-variant/30">
                     <p class="font-bold text-on-surface mb-1">Cara Penggunaan:</p>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li>Gunakan menu <strong>Input Manual</strong> untuk memprediksi data tunggal secara real-time.</li>
+                        <li>Gunakan menu <strong>Input Data</strong> untuk memprediksi data tunggal secara real-time.</li>
                         <li>Gunakan menu <strong>Unggah Batch</strong> untuk memprediksi banyak data sekaligus menggunakan file CSV.</li>
                         <li>Amati <strong>Kinerja Model</strong> di Dashboard utama untuk melihat komparasi data prediksi dan aktual.</li>
                     </ul>
@@ -357,6 +398,32 @@
             };
 
             // Bindings
+
+            document.getElementById('btnRetrainModelSettings')?.addEventListener('click', function() {
+                const btn = this;
+                btn.disabled = true;
+                btn.innerHTML = 'Memulai Training...';
+                
+                // Get CSRF from anywhere, e.g. the reset form
+                const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if(!csrf) { alert('CSRF token missing'); return; }
+
+                fetch("/api/retrain-model/", {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrf }
+                })
+                .then(r => r.json())
+                .then(d => {
+                    btn.innerHTML = 'Training Berjalan';
+                    alert(d.message || 'Proses retraining dimulai di background.');
+                })
+                .catch(e => {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Retrain Model';
+                    alert('Gagal memulai retraining.');
+                });
+            });
+
             document.getElementById('btn-status-sistem')?.addEventListener('click', (e) => { e.preventDefault(); openModal('modal-status'); });
             document.getElementById('btn-settings')?.addEventListener('click', () => openModal('modal-settings'));
             document.getElementById('btn-help')?.addEventListener('click', () => openModal('modal-help'));

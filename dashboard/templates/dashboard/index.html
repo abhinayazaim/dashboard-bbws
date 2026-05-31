@@ -156,9 +156,14 @@
             </div>
         </div>
 
-        <!-- Recent Table Area (4 cols) -->
-        <div class="lg:col-span-4 bg-surface-container border border-outline-variant rounded p-md flex flex-col">
-            <h3 class="font-h2 text-h2 text-on-surface mb-sm">Log Terbaru</h3>
+        <!-- Side Panel (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col gap-gutter">
+            
+            <!-- Forms have been moved to other pages -->
+
+            <!-- Recent Table Area -->
+            <div class="bg-surface-container border border-outline-variant rounded p-md flex flex-col">
+                <h3 class="font-h2 text-h2 text-on-surface mb-sm">Log Terbaru</h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -172,20 +177,20 @@
                     <tbody class="font-data-mono text-data-mono">
                         {% for p in last_4 %}
                         <tr
-                            class="border-b border-outline-variant/50 {% if p.status == 'Darurat' or p.status == 'Bahaya' %}bg-error-container/10{% elif p.status == 'Waspada' %}bg-yellow-900/10{% endif %}">
+                            class="border-b border-outline-variant/50 {% if p.status == 'Awas' %}bg-red-500/5{% elif p.status == 'Siaga' %}bg-yellow-500/5{% elif p.status == 'Waspada' %}bg-green-500/5{% endif %}">
                             <td class="py-3 px-3 text-on-surface">{{ p.created_at|date:"d M H:i" }}</td>
                             <td
-                                class="py-3 px-3 {% if p.status == 'Darurat' or p.status == 'Bahaya' %}font-bold text-error{% elif p.status == 'Waspada' %}font-bold text-orange-400{% else %}text-on-surface{% endif %}">
+                                class="py-3 px-3 {% if p.status == 'Awas' %}font-bold text-red-500{% elif p.status == 'Siaga' %}font-bold text-amber-500{% elif p.status == 'Waspada' %}font-bold text-green-500{% else %}text-on-surface{% endif %}">
                                 {{ p.tma_predicted|floatformat:3 }}</td>
                             <td class="py-3 px-3">
-                                {% if p.status == 'Darurat' %}
-                                <span class="px-2 py-1 bg-[#b91c1c] text-white rounded text-xs font-bold pulse-bahaya uppercase tracking-widest">DARURAT</span>
-                                {% elif p.status == 'Bahaya' %}
-                                <span class="px-2 py-1 bg-[#dc3545] text-white rounded text-xs font-bold pulse-bahaya uppercase tracking-widest">BAHAYA</span>
+                                {% if p.status == 'Awas' %}
+                                <span class="status-badge-custom status-badge-awas">AWAS</span>
+                                {% elif p.status == 'Siaga' %}
+                                <span class="status-badge-custom status-badge-siaga">SIAGA</span>
                                 {% elif p.status == 'Waspada' %}
-                                <span class="px-2 py-1 bg-[#f59e0b] text-white rounded text-xs font-bold uppercase tracking-widest">WASPADA</span>
+                                <span class="status-badge-custom status-badge-waspada">WASPADA</span>
                                 {% else %}
-                                <span class="px-2 py-1 bg-secondary-container/20 text-secondary border border-secondary/50 rounded text-xs font-bold uppercase tracking-widest">NORMAL</span>
+                                <span class="status-badge-custom status-badge-aman">AMAN</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -409,6 +414,88 @@
             options: commonOptions
         });
     }
+
+    // Handlers for New Buttons
+    document.getElementById('btnPredictEsok')?.addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = 'Memproses...';
+        
+        fetch("{% url 'predict_esok_api' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = 'PREDIKSI HARI ESOK';
+            
+            if(data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            const box = document.getElementById('predictResultBox');
+            const val = document.getElementById('predictTmaValue');
+            const badge = document.getElementById('predictStatusBadge');
+            
+            box.classList.remove('hidden');
+            val.innerHTML = data.tma_predicted.toFixed(3);
+            badge.innerHTML = data.status;
+            
+            // Clean classes
+            box.className = 'mt-3 p-4 border rounded text-center';
+            badge.className = 'status-badge-custom';
+            
+            const statusUpper = data.status ? data.status.toUpperCase() : '';
+            if(statusUpper === 'AWAS') {
+                box.classList.add('border-red-500', 'bg-red-500/10');
+                badge.classList.add('status-badge-awas');
+            } else if(statusUpper === 'SIAGA') {
+                box.classList.add('border-yellow-500', 'bg-yellow-500/10');
+                badge.classList.add('status-badge-siaga');
+            } else if(statusUpper === 'WASPADA') {
+                box.classList.add('border-green-500', 'bg-green-500/10');
+                badge.classList.add('status-badge-waspada');
+            } else {
+                box.classList.add('border-white/20', 'bg-white/5');
+                badge.classList.add('status-badge-aman');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.disabled = false;
+            btn.innerHTML = 'PREDIKSI HARI ESOK';
+            alert('Terjadi kesalahan sistem.');
+        });
+    });
+
+    document.getElementById('btnRetrainModel')?.addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = 'Memulai Training...';
+        
+        fetch("{% url 'retrain_model_api' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.innerHTML = 'Training Berjalan';
+            alert(data.message || 'Proses retraining dimulai di background.');
+        })
+        .catch(err => {
+            console.error(err);
+            btn.disabled = false;
+            btn.innerHTML = 'RETRAIN MODEL';
+            alert('Gagal memulai retraining.');
+        });
+    });
+
 </script>
 <script src="{% static 'js/index.js' %}"></script>
 {% endblock %}

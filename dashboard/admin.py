@@ -1,9 +1,16 @@
 from django.contrib import admin
-from .models import PredictionRecord, BatchSession, ModelVersion
+from .models import LogPrediksi, BatchSession, ModelRegistry, DataBendungan
 
 
-@admin.register(PredictionRecord)
-class PredictionRecordAdmin(admin.ModelAdmin):
+@admin.register(DataBendungan)
+class DataBendunganAdmin(admin.ModelAdmin):
+    list_display = ('tanggal', 'tma', 'curah_hujan_mm', 'cuaca_kode')
+    search_fields = ('tanggal',)
+    list_filter = ('cuaca_kode',)
+
+
+@admin.register(LogPrediksi)
+class LogPrediksiAdmin(admin.ModelAdmin):
     list_display = ('created_at', 'tma_predicted', 'status', 'source', 'curah_hujan_mm')
     list_filter = ('status', 'source', 'created_at')
     search_fields = ('notes',)
@@ -14,6 +21,6 @@ class BatchSessionAdmin(admin.ModelAdmin):
     list_display = ('session_id', 'file_name', 'upload_date', 'total_rows', 'danger_count', 'normal_count')
 
 
-@admin.register(ModelVersion)
-class ModelVersionAdmin(admin.ModelAdmin):
-    list_display = ('version_name', 'training_date', 'rmse', 'is_active')
+@admin.register(ModelRegistry)
+class ModelRegistryAdmin(admin.ModelAdmin):
+    list_display = ('version_name', 'training_date', 'val_loss', 'is_active')

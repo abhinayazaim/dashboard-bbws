@@ -15,15 +15,25 @@ JAM_CHOICES = [
 ]
 
 
-class ManualPredictionForm(forms.Form):
-    """User-facing manual prediction form. Lag/delta/rolling features are auto-computed."""
-    waktu = forms.DateTimeField(
-        widget=forms.DateTimeInput(attrs={
-            'type': 'datetime-local',
+class DataBendunganForm(forms.Form):
+    """Form untuk input data harian ke DataBendungan."""
+    tanggal = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'type': 'date',
             'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
-            'id': 'id_waktu',
+            'id': 'id_tanggal',
         }),
-        label='WAKTU',
+        label='TANGGAL',
+    )
+    tma = forms.FloatField(
+        widget=forms.NumberInput(attrs={
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
+            'step': '0.01',
+            'placeholder': '87.00',
+            'id': 'id_tma',
+        }),
+        label='TMA (M)',
+        initial=87.00,
     )
     curah_hujan_mm = forms.FloatField(
         widget=forms.NumberInput(attrs={
@@ -71,6 +81,52 @@ class ManualPredictionForm(forms.Form):
         label='DEBIT SMD KIRI (L/S)',
         initial=0.0,
     )
+
+
+class ManualPredictionForm(forms.Form):
+    """Form untuk prediksi manual tanpa menyimpan ke DataBendungan."""
+    curah_hujan_mm = forms.FloatField(
+        widget=forms.NumberInput(attrs={
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
+            'step': '0.01',
+            'placeholder': '0.00',
+        }),
+        label='CURAH HUJAN (MM)',
+        initial=0.0,
+    )
+    cuaca_kode = forms.ChoiceField(
+        choices=CUACA_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
+        }),
+        label='KODE CUACA',
+    )
+    jam_kode = forms.ChoiceField(
+        choices=JAM_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
+        }),
+        label='JAM PENGUKURAN',
+    )
+    smd_kanan_q_ls = forms.FloatField(
+        widget=forms.NumberInput(attrs={
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
+            'step': '0.1',
+            'placeholder': '0.0',
+        }),
+        label='DEBIT SMD KANAN (L/S)',
+        initial=0.0,
+    )
+    smd_kiri_q_ls = forms.FloatField(
+        widget=forms.NumberInput(attrs={
+            'class': 'form-input w-full bg-[#121212] border border-[#333333] text-[#e3e2e6] rounded py-2 px-3 focus:ring-[#4a7cff] focus:border-[#4a7cff]',
+            'step': '0.1',
+            'placeholder': '0.0',
+        }),
+        label='DEBIT SMD KIRI (L/S)',
+        initial=0.0,
+    )
+
 
 
 class BatchUploadForm(forms.Form):

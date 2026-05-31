@@ -9,8 +9,8 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from django.db.models import Q
 
-from .models import PredictionRecord, BatchSession
-from .forms import ManualPredictionForm, BatchUploadForm
+from .models import LogPrediksi, BatchSession, DataBendungan
+from .forms import DataBendunganForm, BatchUploadForm, ManualPredictionForm
 from .ml_engine import MLEngine
 from .export_utils import export_history_to_csv, export_history_to_pdf
 
@@ -48,37 +48,29 @@ def index_view(request):
     engine = MLEngine()
 
     # Stats
-    total_predictions = PredictionRecord.objects.count()
+    total_predictions = LogPrediksi.objects.count()
     today = timezone.now().date()
-    today_predictions = PredictionRecord.objects.filter(created_at__date=today).count()
-    danger_count = PredictionRecord.objects.filter(status__in=['Bahaya', 'Darurat']).count()
+    today_predictions = LogPrediksi.objects.filter(created_at__date=today).count()
+    danger_count = LogPrediksi.objects.filter(status__in=['Siaga', 'Awas']).count()
 
     # Last 50 for chart
-    # Order by created_at then id to keep batch rows in sequence even if created at same second
-    last_50 = list(PredictionRecord.objects.order_by('-created_at', '-id')[:50])
+    last_50 = list(LogPrediksi.objects.order_by('-created_at', '-id')[:50])
     last_50.reverse()
 
     chart_labels = []
     chart_data = []
     for p in last_50:
-        # Priority: use 'waktu' (actual observation time) if available, fallback to 'created_at'
         label_time = p.waktu if p.waktu else p.created_at
         chart_labels.append(label_time.strftime('%d %b %H:%M'))
         chart_data.append(round(p.tma_predicted, 3))
 
-    # Last 4 for log table
-    last_4 = PredictionRecord.objects.order_by('-created_at')[:4]
-
-    # Model info
+    last_4 = LogPrediksi.objects.order_by('-created_at')[:4]
     threshold = engine.get_threshold()
     metrics = engine.get_model_metrics()
 
-    # Manual prediction form
-    form = ManualPredictionForm()
     result = None
     result_status = None
 
-    # Load static test results for the model performance chart
     static_chart_labels = []
     static_chart_actuals = []
     static_chart_predicteds = []
@@ -88,53 +80,9 @@ def index_view(request):
     if os.path.exists(static_results_path):
         with open(static_results_path, 'r') as f:
             static_data = json.load(f)
-            # Send the entire dataset to the frontend so the slider can navigate 2018-2026
             static_chart_labels = static_data.get('labels', [])
             static_chart_actuals = static_data.get('actuals', [])
             static_chart_predicteds = static_data.get('predicteds', [])
-
-    if request.method == 'POST':
-        form = ManualPredictionForm(request.POST)
-        if form.is_valid():
-            cd = form.cleaned_data
-
-            # Compute lag features from history
-            last_records = list(PredictionRecord.objects.order_by('-created_at')[:3])
-            lag_features = _compute_lag_features(last_records)
-
-            feature_dict = {
-                'curah_hujan_mm': cd['curah_hujan_mm'],
-                'cuaca_kode': float(cd['cuaca_kode']),
-                'smd_kanan_q_ls': cd['smd_kanan_q_ls'],
-                'smd_kiri_q_ls': cd['smd_kiri_q_ls'],
-                'jam_kode': float(cd['jam_kode']),
-                **lag_features,
-            }
-
-            tma_pred, pred_status, th = engine.predict_single(feature_dict)
-
-            # Save to DB
-            PredictionRecord.objects.create(
-                waktu=cd['waktu'],
-                curah_hujan_mm=cd['curah_hujan_mm'],
-                cuaca_kode=float(cd['cuaca_kode']),
-                smd_kanan_q_ls=cd['smd_kanan_q_ls'],
-                smd_kiri_q_ls=cd['smd_kiri_q_ls'],
-                jam_kode=float(cd['jam_kode']),
-                tma_lag1=lag_features['tma_lag1'],
-                tma_lag2=lag_features['tma_lag2'],
-                tma_lag3=lag_features['tma_lag3'],
-                delta_tma=lag_features['delta_tma'],
-                tma_rolling_mean_3=lag_features['tma_rolling_mean_3'],
-                tma_predicted=tma_pred,
-                status=pred_status,
-                threshold_used=th,
-                source='Manual',
-            )
-
-            result = round(tma_pred, 3)
-            result_status = pred_status
-            messages.success(request, 'Prediksi berhasil dilakukan.')
 
     context = {
         'total_predictions': total_predictions,
@@ -146,7 +94,6 @@ def index_view(request):
         'last_4': last_4,
         'metrics': metrics,
         'is_loaded': engine.is_loaded,
-        'form': form,
         'result': result,
         'result_status': result_status,
         'static_chart_labels': json.dumps(static_chart_labels),
@@ -156,67 +103,92 @@ def index_view(request):
     return render(request, 'dashboard/index.html', context)
 
 
-def predict_view(request):
-    """Dedicated manual prediction page."""
-    engine = MLEngine()
-    form = ManualPredictionForm()
-    result = None
-    result_status = None
-
+def predict_esok_api(request):
     if request.method == 'POST':
-        form = ManualPredictionForm(request.POST)
+        from .models import DataBendungan
+        latest = DataBendungan.objects.order_by('-tanggal').first()
+        if not latest:
+            return JsonResponse({'error': 'Data harian kosong. Silakan input data terlebih dahulu.'}, status=400)
+            
+        engine = MLEngine()
+        last_records = list(LogPrediksi.objects.order_by('-created_at')[:3])
+        lag_features = _compute_lag_features(last_records)
+        
+        feature_dict = {
+            'curah_hujan_mm': latest.curah_hujan_mm,
+            'cuaca_kode': latest.cuaca_kode,
+            'smd_kanan_q_ls': latest.smd_kanan_q_ls,
+            'smd_kiri_q_ls': latest.smd_kiri_q_ls,
+            'jam_kode': latest.jam_kode,
+            **lag_features,
+        }
+        
+        tma_pred, pred_status, th = engine.predict_single(feature_dict)
+        
+        # Simpan ke LogPrediksi
+        import datetime
+        pred_waktu = datetime.datetime.combine(latest.tanggal + datetime.timedelta(days=1), datetime.time(12, 0))
+        
+        LogPrediksi.objects.create(
+            waktu=pred_waktu,
+            curah_hujan_mm=latest.curah_hujan_mm,
+            cuaca_kode=latest.cuaca_kode,
+            smd_kanan_q_ls=latest.smd_kanan_q_ls,
+            smd_kiri_q_ls=latest.smd_kiri_q_ls,
+            jam_kode=latest.jam_kode,
+            tma_lag1=lag_features['tma_lag1'],
+            tma_lag2=lag_features['tma_lag2'],
+            tma_lag3=lag_features['tma_lag3'],
+            delta_tma=lag_features['delta_tma'],
+            tma_rolling_mean_3=lag_features['tma_rolling_mean_3'],
+            tma_predicted=tma_pred,
+            status=pred_status,
+            threshold_used=th,
+            source='Manual',
+        )
+        return JsonResponse({'tma_predicted': round(tma_pred, 3), 'status': pred_status})
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+def retrain_model_api(request):
+    if request.method == 'POST':
+        engine = MLEngine()
+        msg = engine.train_candidate_model()
+        return JsonResponse({'message': msg})
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+def predict_view(request):
+    """Input Data page (menyimpan record data harian)."""
+    form = DataBendunganForm()
+    if request.method == 'POST':
+        form = DataBendunganForm(request.POST)
         if form.is_valid():
             cd = form.cleaned_data
-            last_records = list(PredictionRecord.objects.order_by('-created_at')[:3])
-            lag_features = _compute_lag_features(last_records)
-
-            feature_dict = {
-                'curah_hujan_mm': cd['curah_hujan_mm'],
-                'cuaca_kode': float(cd['cuaca_kode']),
-                'smd_kanan_q_ls': cd['smd_kanan_q_ls'],
-                'smd_kiri_q_ls': cd['smd_kiri_q_ls'],
-                'jam_kode': float(cd['jam_kode']),
-                **lag_features,
-            }
-
-            tma_pred, pred_status, th = engine.predict_single(feature_dict)
-
-            PredictionRecord.objects.create(
-                waktu=cd['waktu'],
-                curah_hujan_mm=cd['curah_hujan_mm'],
-                cuaca_kode=float(cd['cuaca_kode']),
-                smd_kanan_q_ls=cd['smd_kanan_q_ls'],
-                smd_kiri_q_ls=cd['smd_kiri_q_ls'],
-                jam_kode=float(cd['jam_kode']),
-                tma_lag1=lag_features['tma_lag1'],
-                tma_lag2=lag_features['tma_lag2'],
-                tma_lag3=lag_features['tma_lag3'],
-                delta_tma=lag_features['delta_tma'],
-                tma_rolling_mean_3=lag_features['tma_rolling_mean_3'],
-                tma_predicted=tma_pred,
-                status=pred_status,
-                threshold_used=th,
-                source='Manual',
+            DataBendungan.objects.update_or_create(
+                tanggal=cd['tanggal'],
+                defaults={
+                    'tma': cd['tma'],
+                    'curah_hujan_mm': cd['curah_hujan_mm'],
+                    'cuaca_kode': cd['cuaca_kode'],
+                    'smd_kanan_q_ls': cd['smd_kanan_q_ls'],
+                    'smd_kiri_q_ls': cd['smd_kiri_q_ls'],
+                    'jam_kode': cd['jam_kode'],
+                }
             )
-
-            result = round(tma_pred, 3)
-            result_status = pred_status
-            messages.success(request, 'Prediksi berhasil dilakukan.')
-
-    context = {
-        'form': form,
-        'result': result,
-        'result_status': result_status,
-        'threshold': engine.get_threshold(),
-    }
-    return render(request, 'dashboard/predict.html', context)
+            messages.success(request, 'Data harian berhasil disimpan ke database.')
+            return redirect('input_data')
+    return render(request, 'dashboard/input_data.html', {'form': form})
 
 
 def batch_predict_view(request):
-    """Batch upload and prediction page."""
-    if request.method == 'POST':
-        form = BatchUploadForm(request.POST, request.FILES)
-        if form.is_valid():
+    """Batch upload and manual prediction page."""
+    form_batch = BatchUploadForm()
+    form_manual = ManualPredictionForm()
+    
+    if request.method == 'POST' and 'csv_file' in request.FILES:
+        form_batch = BatchUploadForm(request.POST, request.FILES)
+        if form_batch.is_valid():
             uploaded_file = request.FILES['csv_file']
             file_name = uploaded_file.name
 
@@ -258,13 +230,13 @@ def batch_predict_view(request):
 
                 for _, row in result_df.iterrows():
                     pred_status = row.get('status', 'Pending')
-                    if pred_status == 'Darurat':
+                    if pred_status == 'Awas':
                         darurat_count += 1
-                    elif pred_status == 'Bahaya':
+                    elif pred_status == 'Siaga':
                         danger_count += 1
                     elif pred_status == 'Waspada':
                         waspada_count += 1
-                    elif pred_status == 'Normal':
+                    elif pred_status == 'Aman':
                         normal_count += 1
 
                     pred_val = row.get('tma_predicted', 0.0)
@@ -283,7 +255,7 @@ def batch_predict_view(request):
                         except Exception:
                             pass
 
-                    records.append(PredictionRecord(
+                    records.append(LogPrediksi(
                         waktu=obs_time,
                         curah_hujan_mm=row.get('curah_hujan_mm', 0),
                         cuaca_kode=row.get('cuaca_kode', 0),
@@ -302,7 +274,7 @@ def batch_predict_view(request):
                         batch_session=session,
                     ))
 
-                PredictionRecord.objects.bulk_create(records)
+                LogPrediksi.objects.bulk_create(records)
 
                 session.danger_count = danger_count + darurat_count # aggregate danger for session
                 session.normal_count = normal_count + waspada_count
@@ -310,21 +282,69 @@ def batch_predict_view(request):
 
                 messages.success(
                     request,
-                    f'Batch berhasil diproses: {normal_count} Normal, {waspada_count} Waspada, {danger_count} Bahaya, {darurat_count} Darurat.'
+                    f'Batch berhasil diproses: {normal_count} Aman, {waspada_count} Waspada, {danger_count} Siaga, {darurat_count} Awas.'
                 )
                 return redirect('history')
 
             except Exception as e:
                 messages.error(request, f"Error: {str(e)}")
-    else:
-        form = BatchUploadForm()
 
-    return render(request, 'dashboard/batch.html', {'form': form})
+    elif request.method == 'POST' and 'curah_hujan_mm' in request.POST:
+        form_manual = ManualPredictionForm(request.POST)
+        if form_manual.is_valid():
+            engine = MLEngine()
+            cd = form_manual.cleaned_data
+            
+            last_records = list(LogPrediksi.objects.order_by('-created_at')[:3])
+            lag_features = _compute_lag_features(last_records)
+            
+            feature_dict = {
+                'curah_hujan_mm': cd['curah_hujan_mm'],
+                'cuaca_kode': int(cd['cuaca_kode']),
+                'smd_kanan_q_ls': cd['smd_kanan_q_ls'],
+                'smd_kiri_q_ls': cd['smd_kiri_q_ls'],
+                'jam_kode': int(cd['jam_kode']),
+                **lag_features,
+            }
+            
+            tma_pred, pred_status, th = engine.predict_single(feature_dict)
+            
+            # Save to log but without marking as 'Manual' from DB, mark as 'Manual Test'
+            LogPrediksi.objects.create(
+                waktu=timezone.now(),
+                curah_hujan_mm=cd['curah_hujan_mm'],
+                cuaca_kode=int(cd['cuaca_kode']),
+                smd_kanan_q_ls=cd['smd_kanan_q_ls'],
+                smd_kiri_q_ls=cd['smd_kiri_q_ls'],
+                jam_kode=int(cd['jam_kode']),
+                tma_lag1=lag_features['tma_lag1'],
+                tma_lag2=lag_features['tma_lag2'],
+                tma_lag3=lag_features['tma_lag3'],
+                delta_tma=lag_features['delta_tma'],
+                tma_rolling_mean_3=lag_features['tma_rolling_mean_3'],
+                tma_predicted=tma_pred,
+                status=pred_status,
+                threshold_used=th,
+                source='Manual Test',
+            )
+            
+            return render(request, 'dashboard/prediksi.html', {
+                'form_batch': form_batch,
+                'form_manual': form_manual,
+                'result': round(tma_pred, 3),
+                'result_status': pred_status,
+                'threshold': th,
+            })
+
+    return render(request, 'dashboard/prediksi.html', {
+        'form_batch': form_batch,
+        'form_manual': form_manual,
+    })
 
 
 def history_view(request):
     """Prediction history page with filters."""
-    query = PredictionRecord.objects.all()
+    query = LogPrediksi.objects.all()
 
     # Filters
     year_filter = request.GET.get('year', '')
@@ -451,7 +471,7 @@ def reset_data_view(request):
     """Deletes all prediction records and batch sessions."""
     if request.method == 'POST':
         # Delete all records
-        PredictionRecord.objects.all().delete()
+        LogPrediksi.objects.all().delete()
         BatchSession.objects.all().delete()
         
         messages.success(request, "Seluruh riwayat data telah berhasil direset ke nol.")

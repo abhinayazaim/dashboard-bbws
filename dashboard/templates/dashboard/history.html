@@ -44,10 +44,10 @@
         <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Status</label>
         <select name="status" id="status-filter" class="bg-[#121212] border border-[#333333] text-on-surface font-body-sm text-body-sm rounded py-1.5 pl-3 pr-8 focus:ring-[#1F3864] focus:border-[#1F3864]" onchange="this.form.submit()">
             <option value="all" {% if status_filter == 'all' or not status_filter %}selected{% endif %}>Semua Status</option>
-            <option value="Normal" {% if status_filter == 'Normal' %}selected{% endif %}>Normal</option>
+            <option value="Aman" {% if status_filter == 'Aman' %}selected{% endif %}>Aman</option>
             <option value="Waspada" {% if status_filter == 'Waspada' %}selected{% endif %}>Waspada</option>
-            <option value="Bahaya" {% if status_filter == 'Bahaya' %}selected{% endif %}>Bahaya</option>
-            <option value="Darurat" {% if status_filter == 'Darurat' %}selected{% endif %}>Darurat</option>
+            <option value="Siaga" {% if status_filter == 'Siaga' %}selected{% endif %}>Siaga</option>
+            <option value="Awas" {% if status_filter == 'Awas' %}selected{% endif %}>Awas</option>
         </select>
     </div>
     
@@ -91,18 +91,18 @@
                     <td class="px-sm py-3 text-center text-on-surface-variant">{{ forloop.counter0|add:page_obj.start_index }}</td>
                     <td class="px-sm py-3">{% if p.waktu %}{{ p.waktu|date:"Y-m-d H:i:s" }}{% else %}<span class="text-outline">—</span>{% endif %}</td>
                     <td class="px-sm py-3 text-xs text-on-surface-variant">{{ p.created_at|date:"Y-m-d H:i:s" }}</td>
-                    <td class="px-sm py-3 text-right {% if p.status == 'Darurat' or p.status == 'Bahaya' %}text-error font-bold{% elif p.status == 'Waspada' %}text-orange-400 font-bold{% endif %}">{{ p.tma_predicted|floatformat:3 }}</td>
+                    <td class="px-sm py-3 text-right {% if p.status == 'Awas' %}text-red-500 font-bold{% elif p.status == 'Siaga' %}text-amber-500 font-bold{% elif p.status == 'Waspada' %}text-green-500 font-bold{% endif %}">{{ p.tma_predicted|floatformat:3 }}</td>
                     <td class="px-sm py-3 text-right">{{ p.curah_hujan_mm|floatformat:1 }}</td>
                     <td class="px-sm py-3 text-right">{{ p.smd_kanan_q_ls|floatformat:1 }}</td>
                     <td class="px-sm py-3 text-center">
-                        {% if p.status == 'Darurat' %}
-                        <span class="inline-block bg-[#b91c1c] text-white font-label-caps text-[10px] px-2 py-1 rounded pulse-bahaya tracking-widest">DARURAT</span>
-                        {% elif p.status == 'Bahaya' %}
-                        <span class="inline-block bg-[#dc3545] text-white font-label-caps text-[10px] px-2 py-1 rounded pulse-bahaya tracking-widest">BAHAYA</span>
+                        {% if p.status == 'Awas' %}
+                        <span class="status-badge-custom status-badge-awas">AWAS</span>
+                        {% elif p.status == 'Siaga' %}
+                        <span class="status-badge-custom status-badge-siaga">SIAGA</span>
                         {% elif p.status == 'Waspada' %}
-                        <span class="inline-block bg-[#f59e0b] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest">WASPADA</span>
+                        <span class="status-badge-custom status-badge-waspada">WASPADA</span>
                         {% else %}
-                        <span class="inline-block bg-[#27a644] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest">NORMAL</span>
+                        <span class="status-badge-custom status-badge-aman">AMAN</span>
                         {% endif %}
                     </td>
                     <td class="px-sm py-3 text-center">

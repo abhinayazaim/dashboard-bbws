@@ -1,17 +1,60 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Batch Upload - Bajulmati Dam{% endblock %}
+{% block title %}Prediksi TMA - Bajulmati Dam{% endblock %}
 
 {% block content %}
 <div class="mb-lg">
-    <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Upload Batch Data</h2>
-    <p class="font-body-md text-body-md text-on-surface-variant">Unggah file CSV untuk prediksi.</p>
+    <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Prediksi TMA</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Prediksi menggunakan data manual atau unggah file CSV.</p>
+</div>
+
+<!-- Manual Prediction Card -->
+<div class="bg-[#1e1e1e] border border-[#333333] rounded-lg p-lg mb-lg">
+    <h3 class="font-h2 text-h2 text-on-surface mb-md">Prediksi via Input Manual</h3>
+    <form method="POST" action="{% url 'prediksi' %}" class="grid grid-cols-1 md:grid-cols-2 gap-sm">
+        {% csrf_token %}
+        <div class="space-y-1">
+            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form_manual.curah_hujan_mm.label }}</label>
+            {{ form_manual.curah_hujan_mm }}
+        </div>
+        <div class="space-y-1">
+            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form_manual.cuaca_kode.label }}</label>
+            {{ form_manual.cuaca_kode }}
+        </div>
+        <div class="space-y-1">
+            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form_manual.jam_kode.label }}</label>
+            {{ form_manual.jam_kode }}
+        </div>
+        <div class="space-y-1">
+            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form_manual.smd_kanan_q_ls.label }}</label>
+            {{ form_manual.smd_kanan_q_ls }}
+        </div>
+        <div class="space-y-1">
+            <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form_manual.smd_kiri_q_ls.label }}</label>
+            {{ form_manual.smd_kiri_q_ls }}
+        </div>
+        <div class="col-span-1 md:col-span-2 mt-4">
+            <button type="submit" class="w-full bg-primary-container hover:bg-primary-container/80 text-[#e0e0e0] font-h2 py-3 px-6 rounded transition-colors duration-200">
+                Prediksi Cepat
+            </button>
+        </div>
+    </form>
+    {% if result %}
+    <div class="mt-md p-md bg-[#121212] border border-[#333333] rounded text-center">
+        <p class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-2">Hasil Prediksi Manual</p>
+        <p class="text-3xl font-data-mono font-bold text-on-surface mb-2">{{ result }} m</p>
+        <span class="status-badge-custom {% if result_status == 'Awas' %}status-badge-awas{% elif result_status == 'Siaga' %}status-badge-siaga{% elif result_status == 'Waspada' %}status-badge-waspada{% else %}status-badge-aman{% endif %}">
+            {{ result_status }}
+        </span>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Upload Card -->
 <div class="bg-[#1e1e1e] border border-[#333333] rounded-lg p-lg mb-lg">
-    <form method="POST" action="{% url 'batch_predict' %}" enctype="multipart/form-data" id="batch-form">
+    <h3 class="font-h2 text-h2 text-on-surface mb-md">Prediksi via Upload File (Batch)</h3>
+    <form method="POST" action="{% url 'prediksi' %}" enctype="multipart/form-data" id="batch-form">
         {% csrf_token %}
         <input type="file" name="csv_file" id="file-upload" class="hidden" accept=".csv">
         
@@ -147,21 +190,21 @@ function copyPrompt() {
             </thead>
             <tbody class="font-data-mono text-data-mono text-on-surface">
                 {% for row in preview_data %}
-                <tr class="border-b border-[#333333] hover:bg-[#2a2a2a] transition-colors {% if row.status == 'Darurat' or row.status == 'Bahaya' %}bg-error-container/10{% elif row.status == 'Waspada' %}bg-yellow-900/10{% endif %}">
+                <tr class="border-b border-[#333333] hover:bg-[#2a2a2a] transition-colors {% if row.status == 'Awas' %}bg-red-500/5{% elif row.status == 'Siaga' %}bg-yellow-500/5{% elif row.status == 'Waspada' %}bg-green-500/5{% endif %}">
                     <td class="p-sm text-on-surface-variant">{{ row.waktu }}</td>
                     <td class="p-sm">{{ row.curah_hujan_mm|floatformat:2 }}</td>
                     <td class="p-sm text-right">{{ row.smd_kanan_q_ls|floatformat:2 }}</td>
                     <td class="p-sm text-right">{{ row.smd_kiri_q_ls|floatformat:2 }}</td>
-                    <td class="p-sm text-right {% if row.status == 'Darurat' or row.status == 'Bahaya' %}text-error font-bold{% elif row.status == 'Waspada' %}text-orange-400 font-bold{% endif %}">{{ row.tma_predicted|floatformat:3 }}</td>
+                    <td class="p-sm text-right {% if row.status == 'Awas' %}text-red-500 font-bold{% elif row.status == 'Siaga' %}text-amber-500 font-bold{% elif row.status == 'Waspada' %}text-green-500 font-bold{% endif %}">{{ row.tma_predicted|floatformat:3 }}</td>
                     <td class="p-sm text-center">
-                        {% if row.status == 'Darurat' %}
-                        <span class="inline-block bg-[#b91c1c] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest pulse-bahaya">DARURAT</span>
-                        {% elif row.status == 'Bahaya' %}
-                        <span class="inline-block bg-[#dc3545] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest pulse-bahaya">BAHAYA</span>
+                        {% if row.status == 'Awas' %}
+                        <span class="status-badge-custom status-badge-awas">AWAS</span>
+                        {% elif row.status == 'Siaga' %}
+                        <span class="status-badge-custom status-badge-siaga">SIAGA</span>
                         {% elif row.status == 'Waspada' %}
-                        <span class="inline-block bg-[#f59e0b] text-white font-label-caps text-[10px] px-2 py-1 rounded tracking-widest">WASPADA</span>
+                        <span class="status-badge-custom status-badge-waspada">WASPADA</span>
                         {% else %}
-                        <span class="inline-block bg-secondary-container/20 text-secondary border border-secondary/50 font-label-caps text-[10px] px-2 py-1 rounded tracking-widest">NORMAL</span>
+                        <span class="status-badge-custom status-badge-aman">AMAN</span>
                         {% endif %}
                     </td>
                 </tr>

@@ -89,14 +89,43 @@
     </div>
 </div>
 
-<!-- Bottom Section: AI Architecture Text -->
-<div class="bg-[#1e1e1e] border border-[#333333] rounded p-md max-w-4xl hover:bg-[#2a2a2a] transition-colors duration-200">
-    <h4 class="font-h2 text-h2 text-on-surface mb-xs flex items-center gap-xs">
-        <span class="material-symbols-outlined text-secondary">memory</span>
-        Arsitektur AI
-    </h4>
-    <p class="font-body-sm text-body-sm text-on-surface-variant">
-        Sistem ini mengimplementasikan arsitektur hybrid <strong>LSTM-Attention</strong> (Long Short-Term Memory). LSTM dikonfigurasi untuk menangkap dependensi temporal sekuensial jangka panjang dari fluktuasi TMA historis, sementara lapisan Attention Layer menggunakan mekanisme <em>feature-wise attention</em> untuk secara dinamis menimbang pengaruh faktor eksternal (curah hujan tinggi, debit sungai) secara real-time. Konfigurasi ini memastikan prediksi yang sangat responsif terhadap lonjakan TMA ekstrem yang tidak terprediksi secara linier.
-    </p>
+<!-- Bottom Section: AI Architecture Text & Thresholds -->
+<div class="grid grid-cols-12 gap-gutter">
+    <div class="col-span-12 lg:col-span-7 bg-[#1e1e1e] border border-[#333333] rounded p-md hover:bg-[#2a2a2a] transition-colors duration-200">
+        <h4 class="font-h2 text-h2 text-on-surface mb-xs flex items-center gap-xs">
+            <span class="material-symbols-outlined text-secondary">memory</span>
+            Arsitektur AI
+        </h4>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">
+            Sistem ini mengimplementasikan arsitektur hybrid <strong>LSTM-Attention</strong> (Long Short-Term Memory). LSTM dikonfigurasi untuk menangkap dependensi temporal sekuensial jangka panjang dari fluktuasi TMA historis, sementara lapisan Attention Layer menggunakan mekanisme <em>feature-wise attention</em> untuk secara dinamis menimbang pengaruh faktor eksternal (curah hujan tinggi, debit sungai) secara real-time. Konfigurasi ini memastikan prediksi yang sangat responsif terhadap lonjakan TMA ekstrem yang tidak terprediksi secara linier.
+        </p>
+    </div>
+
+    <div class="col-span-12 lg:col-span-5 bg-[#1e1e1e] border border-[#333333] rounded p-md hover:bg-[#2a2a2a] transition-colors duration-200">
+        <h4 class="font-h2 text-h2 text-on-surface mb-xs flex items-center gap-xs">
+            <span class="material-symbols-outlined text-tertiary">warning</span>
+            Rentang Klasifikasi Status
+        </h4>
+        <table class="w-full text-left mt-2 border-collapse">
+            <tbody>
+                <tr class="border-b border-[#333333]">
+                    <td class="py-2"><span class="px-2 py-1 bg-white text-black rounded text-xs font-bold uppercase tracking-widest">AMAN</span></td>
+                    <td class="py-2 font-data-mono text-on-surface-variant text-right">&lt; 87.60 m</td>
+                </tr>
+                <tr class="border-b border-[#333333]">
+                    <td class="py-2"><span class="px-2 py-1 bg-green-600 text-white rounded text-xs font-bold uppercase tracking-widest">WASPADA</span></td>
+                    <td class="py-2 font-data-mono text-on-surface-variant text-right">87.60 m - 89.486 m</td>
+                </tr>
+                <tr class="border-b border-[#333333]">
+                    <td class="py-2"><span class="px-2 py-1 bg-yellow-600 text-white rounded text-xs font-bold uppercase tracking-widest">SIAGA</span></td>
+                    <td class="py-2 font-data-mono text-on-surface-variant text-right">89.487 m - 91.299 m</td>
+                </tr>
+                <tr>
+                    <td class="py-2"><span class="px-2 py-1 bg-red-600 text-white rounded text-xs font-bold uppercase tracking-widest">AWAS</span></td>
+                    <td class="py-2 font-data-mono text-error font-bold text-right">&ge; 91.30 m</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}
