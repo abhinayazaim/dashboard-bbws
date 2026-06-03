@@ -1,171 +1,283 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Prediksi Manual - Bajulmati Dam{% endblock %}
+{% block title %}Input Data Observasi - Bajulmati Dam{% endblock %}
 
 {% block content %}
-<div class="mb-lg">
-    <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Prediksi Manual</h2>
-    <p class="font-body-md text-body-md text-on-surface-variant">Masukkan data metrik secara manual untuk mendapatkan hasil prediksi secara langsung.</p>
+<div class="flex justify-between items-center mb-lg">
+    <div>
+        <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Input Data Observasi</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant">Masukkan record data observasi harian bendungan untuk disimpan langsung ke database.</p>
+    </div>
+    <div>
+        <a href="{% url 'historical_data' %}" class="flex items-center gap-xs px-4 py-2.5 bg-transparent border border-[#333333] text-[#e0e0e0] font-label-caps text-label-caps rounded hover:bg-surface-bright transition-colors text-center">
+            <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+            LIHAT DATA HISTORIS
+        </a>
+    </div>
+</div><!-- Alert messages block -->
+{% if messages %}
+<div class="mb-sm">
+    {% for message in messages %}
+    <div class="p-sm rounded mb-2 flex items-center gap-2 font-body-sm text-body-sm {% if message.tags == 'error' %}bg-error-container/20 border border-error/50 text-error{% else %}bg-secondary-container/20 border border-secondary/50 text-secondary-fixed-dim{% endif %} shadow-md">
+        <span class="material-symbols-outlined text-[20px]">
+            {% if message.tags == 'error' %}error{% else %}check_circle{% endif %}
+        </span>
+        {{ message }}
+    </div>
+    {% endfor %}
 </div>
+{% endif %}
 
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
-    <!-- Form Card (8 cols) -->
-    <div class="lg:col-span-8 bg-surface-container border border-outline-variant rounded p-md">
-        <form method="POST" action="{% url 'input_data' %}" class="grid grid-cols-1 md:grid-cols-2 gap-sm" id="predict-form">
-            {% csrf_token %}
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-stretch mb-lg">
+    <!-- Form Card (7 cols) -->
+    <div class="lg:col-span-7 bg-surface-container border border-outline-variant rounded p-md flex flex-col justify-between">
+        <div>
+            <h3 class="font-h2 text-h2 text-on-surface mb-sm">Form Data Baru</h3>
+            <p class="text-xs text-on-surface-variant mb-md">Lengkapi data observasi di bawah ini secara akurat. Data yang tumpang tindih dengan tanggal yang sama akan diperbarui.</p>
             
-            <div class="space-y-1">
-                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.waktu.label }}</label>
-                {{ form.waktu }}
-            </div>
-            
-            <div class="space-y-1">
-                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.curah_hujan_mm.label }}</label>
-                {{ form.curah_hujan_mm }}
-            </div>
-            
-            <div class="space-y-1">
-                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.cuaca_kode.label }}</label>
-                {{ form.cuaca_kode }}
-            </div>
-            
-            <div class="space-y-1">
-                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.jam_kode.label }}</label>
-                {{ form.jam_kode }}
-            </div>
-            
-            <div class="space-y-1">
-                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.smd_kanan_q_ls.label }}</label>
-                {{ form.smd_kanan_q_ls }}
-            </div>
-            
-            <div class="space-y-1">
-                <label class="font-label-caps text-label-caps text-on-surface-variant uppercase">{{ form.smd_kiri_q_ls.label }}</label>
-                {{ form.smd_kiri_q_ls }}
-            </div>
-
-            <!-- Wait, the original form only had these 6 inputs. We do not need the other inputs as they are computed automatically -->
-            
-            <div class="col-span-1 md:col-span-2 mt-4 flex gap-sm">
-                <button type="button" id="clear-btn" class="bg-surface border border-outline-variant hover:bg-surface-bright text-[#e0e0e0] font-h2 py-3 px-6 rounded transition-colors duration-200 flex-1">
-                    Reset
-                </button>
-                <button type="submit" id="predict-submit-btn" class="bg-primary-container hover:bg-primary-container/80 text-[#e0e0e0] font-h2 py-3 px-6 rounded transition-colors duration-200 flex-[2]">
-                    Prediksi Sekarang
-                </button>
-            </div>
-        </form>
+            <form method="POST" action="{% url 'input_data' %}" class="grid grid-cols-1 md:grid-cols-2 gap-sm" id="observation-form">
+                {% csrf_token %}
+                
+                <div class="space-y-1">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="id_tanggal">Tanggal</label>
+                    {{ form.tanggal }}
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="id_tma">Tinggi Muka Air (TMA) (m)</label>
+                    {{ form.tma }}
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="id_curah_hujan">Curah Hujan (mm)</label>
+                    {{ form.curah_hujan_mm }}
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="id_cuaca_kode">Kondisi Cuaca</label>
+                    {{ form.cuaca_kode }}
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="id_jam_kode">Jam Pengukuran</label>
+                    {{ form.jam_kode }}
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="id_smd_kanan">Debit SMD Kanan (L/S)</label>
+                    {{ form.smd_kanan_q_ls }}
+                </div>
+                
+                <div class="space-y-1 col-span-1 md:col-span-2">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant uppercase" for="id_smd_kiri">Debit SMD Kiri (L/S)</label>
+                    {{ form.smd_kiri_q_ls }}
+                </div>
+                
+                <div class="col-span-1 md:col-span-2 mt-4 flex gap-sm">
+                    <button type="button" id="clear-btn" class="bg-surface border border-outline-variant hover:bg-surface-bright text-[#e0e0e0] font-h2 py-3 px-6 rounded transition-colors duration-200 flex-1">
+                        Reset Form
+                    </button>
+                    <button type="submit" id="submit-btn" class="bg-primary-container hover:bg-primary-container/80 text-[#e0e0e0] font-h2 py-3 px-6 rounded transition-colors duration-200 flex-[2] flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">save</span>
+                        Simpan Data
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- Result Box (4 cols) -->
-    <div class="lg:col-span-4 bg-surface-container border-t-2 {% if result_status == 'Awas' %}border-red-600{% elif result_status == 'Siaga' %}border-[#c68a00]{% elif result_status == 'Waspada' %}border-[#28a745]{% else %}border-white{% endif %} border-x border-b border-outline-variant rounded p-lg flex flex-col items-center justify-center min-h-[300px] shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative overflow-hidden">
-        {% if result %}
-            {% if result_status == 'Awas' %}
-                <div class="absolute inset-0 bg-red-500/5 pointer-events-none"></div>
-            {% elif result_status == 'Siaga' %}
-                <div class="absolute inset-0 bg-yellow-500/5 pointer-events-none"></div>
-            {% elif result_status == 'Waspada' %}
-                <div class="absolute inset-0 bg-green-500/5 pointer-events-none"></div>
-            {% endif %}
-            <div class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-4 z-10">Hasil Prediksi</div>
+    <!-- Help Card (5 cols) -->
+    <div class="lg:col-span-5 bg-surface-container border border-outline-variant rounded p-md flex flex-col justify-between">
+        <div>
+            <h3 class="font-h2 text-h2 text-on-surface mb-sm flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">info</span>
+                Panduan Admin
+            </h3>
             
-            <!-- Gauge Chart Container -->
-            <div class="relative w-48 h-24 mb-6 z-10">
-                <canvas id="gaugeChart"></canvas>
-                <div class="absolute inset-0 flex flex-col items-center justify-end pb-1">
-                    <div class="font-display-lg text-[32px] text-on-surface font-bold tracking-tighter" id="result-value">
-                        {{ result }}<span class="text-lg text-on-surface-variant ml-1">m</span>
-                    </div>
+            <div class="space-y-4 font-body-sm text-on-surface-variant text-sm mt-md">
+                <div class="bg-surface p-sm rounded border border-outline-variant/30">
+                    <p class="font-bold text-on-surface mb-1">Penyimpanan Otomatis</p>
+                    <p class="text-xs">Sistem akan melakukan <strong>update</strong> jika data pada tanggal yang dipilih sudah ada sebelumnya. Jika belum ada, sistem akan membuat baris data baru.</p>
+                </div>
+                
+                <div class="bg-surface p-sm rounded border border-outline-variant/30">
+                    <p class="font-bold text-on-surface mb-1">Pengaruh ke Model AI</p>
+                    <p class="text-xs">Data observasi harian yang Anda simpan di sini akan secara otomatis menjadi bahan latihan baru saat proses <strong>Retrain Model</strong> dijalankan di Pengaturan.</p>
+                </div>
+
+                <div class="bg-surface p-sm rounded border border-outline-variant/30">
+                    <p class="font-bold text-on-surface mb-1">Kode Cuaca & Jam</p>
+                    <ul class="list-disc pl-4 text-xs space-y-1">
+                        <li>Cerah = 0 | Berawan = 1 | Hujan = 2</li>
+                        <li>Kode Jam mencakup pembacaan pagi (06:00), siang (12:00), dan sore (18:00) sesuai standar operasional.</li>
+                    </ul>
                 </div>
             </div>
-            
-            {% if result_status == 'Awas' %}
-            <div class="px-6 py-2 bg-[#dc3545] text-white rounded text-lg font-bold tracking-widest z-10 uppercase text-center min-w-[140px]">
-                {{ result_status }}
-            </div>
-            {% elif result_status == 'Siaga' %}
-            <div class="px-6 py-2 bg-[#c68a00] text-white rounded text-lg font-bold tracking-widest z-10 uppercase text-center min-w-[140px]">
-                {{ result_status }}
-            </div>
-            {% elif result_status == 'Waspada' %}
-            <div class="px-6 py-2 bg-[#28a745] text-white rounded text-lg font-bold tracking-widest z-10 uppercase text-center min-w-[140px]">
-                {{ result_status }}
-            </div>
+        </div>
+        
+        <div class="mt-lg pt-4 border-t border-outline-variant/20 flex justify-between items-center text-xs text-outline">
+            <span>Bendungan Bajulmati Dashboard</span>
+            <span>V2.0.0</span>
+        </div>
+    </div>
+</div>
+
+<!-- Database Records Table -->
+<div class="bg-[#1e1e1e] border border-[#333333] rounded overflow-hidden">
+    <div class="p-sm bg-[#1a1b1f] border-b border-[#333333] flex justify-between items-center">
+        <h3 class="font-h2 text-h2 text-on-surface">Database Observasi Harian</h3>
+        <span class="font-label-caps text-label-caps bg-surface-container-highest px-3 py-1 rounded text-on-surface-variant">Total: {{ paginator.count }} Record</span>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-[#1e1e1e] border-b border-[#333333]">
+                <tr>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest w-12 text-center">No</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Tanggal</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">TMA (m)</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">Curah Hujan (mm)</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-center">Cuaca</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-center">Jam</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">Debit Kanan (l/s)</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">Debit Kiri (l/s)</th>
+                    <th class="px-sm py-3 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="font-data-mono text-data-mono text-on-surface">
+                {% for p in page_obj %}
+                <tr class="border-b border-[#333333] hover:bg-[#2a2a2a] transition-colors">
+                    <td class="px-sm py-3 text-center text-on-surface-variant">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                    <td class="px-sm py-3 text-on-surface font-semibold">{{ p.tanggal|date:"Y-m-d" }}</td>
+                    <td class="px-sm py-3 text-right text-primary font-bold">{{ p.tma|floatformat:2 }}</td>
+                    <td class="px-sm py-3 text-right">{{ p.curah_hujan_mm|floatformat:2 }}</td>
+                    <td class="px-sm py-3 text-center">
+                        {% if p.cuaca_kode == 0.0 or p.cuaca_kode == 0 %}
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">Cerah</span>
+                        {% elif p.cuaca_kode == 1.0 or p.cuaca_kode == 1 %}
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-zinc-500/20 text-zinc-400 border border-zinc-500/30">Berawan</span>
+                        {% elif p.cuaca_kode == 2.0 or p.cuaca_kode == 2 %}
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">Hujan</span>
+                        {% elif p.cuaca_kode == 3.0 or p.cuaca_kode == 3 %}
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/30">Mendung</span>
+                        {% elif p.cuaca_kode == 4.0 or p.cuaca_kode == 4 %}
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-600/20 text-blue-300 border border-blue-600/40">Hujan</span>
+                        {% else %}
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant">{{ p.cuaca_kode|floatformat:0 }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-sm py-3 text-center">
+                        {% if p.jam_kode == 0.0 or p.jam_kode == 0 or p.jam_kode == 6.0 or p.jam_kode == 6 %}
+                            <span class="text-xs px-2 py-0.5 rounded bg-[#1f3864]/30 text-primary border border-primary/30">06:00</span>
+                        {% elif p.jam_kode == 1.0 or p.jam_kode == 1 or p.jam_kode == 12.0 or p.jam_kode == 12 %}
+                            <span class="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">12:00</span>
+                        {% elif p.jam_kode == 2.0 or p.jam_kode == 2 or p.jam_kode == 18.0 or p.jam_kode == 18 or p.jam_kode == 17.0 or p.jam_kode == 17 %}
+                            <span class="text-xs px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/30">18:00</span>
+                        {% else %}
+                            <span class="text-xs px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant">{{ p.jam_kode|floatformat:0 }}:00</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-sm py-3 text-right">{{ p.smd_kanan_q_ls|floatformat:2 }}</td>
+                    <td class="px-sm py-3 text-right">{{ p.smd_kiri_q_ls|floatformat:2 }}</td>
+                    <td class="px-sm py-3 text-center">
+                        <form action="{% url 'delete_observation' p.id %}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data observasi tanggal {{ p.tanggal|date:'Y-m-d' }}?')" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-error hover:text-[#ffdad6] hover:bg-error-container/20 p-1 rounded transition-all duration-150 inline-flex items-center" title="Hapus Data">
+                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="px-sm py-8 text-center text-on-surface-variant font-body-sm">
+                        Tidak ada record data observasi di database.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="bg-[#1e1e1e] border-t border-[#333333] p-sm flex items-center justify-between">
+        <span class="font-body-sm text-body-sm text-on-surface-variant">Menampilkan {{ page_obj.start_index }}-{{ page_obj.end_index }} dari {{ paginator.count }} data</span>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant hover:bg-[#2a2a2a] hover:text-on-surface">
+                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </a>
             {% else %}
-            <div class="px-6 py-2 bg-white text-black rounded text-lg font-bold tracking-widest z-10 uppercase text-center min-w-[140px]">
-                {{ result_status }}
-            </div>
+            <button class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant opacity-50 cursor-not-allowed" disabled>
+                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </button>
             {% endif %}
             
-            <button id="copy-btn" class="mt-6 flex items-center gap-2 text-primary hover:text-primary-fixed-dim transition-colors z-10 bg-transparent border-none cursor-pointer">
-                <span class="material-symbols-outlined text-sm">content_copy</span> Copy Hasil
+            <button class="w-8 h-8 flex items-center justify-center rounded bg-[#1F3864] text-[#e0e0e0] font-data-mono text-data-mono">{{ page_obj.number }}</button>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant hover:bg-[#2a2a2a] hover:text-on-surface">
+                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+            </a>
+            {% else %}
+            <button class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant opacity-50 cursor-not-allowed" disabled>
+                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
             </button>
-        {% else %}
-            <div class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-4 z-10 text-center">
-                <span class="material-symbols-outlined text-4xl block mb-2 opacity-50">data_object</span>
-                Masukkan data untuk<br>melihat prediksi
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/predict.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        flatpickr("#id_waktu", {
-            enableTime: true,
-            dateFormat: "Y-m-d H:i",
-            time_24hr: true,
+        // Initialize date picker using Flatpickr
+        flatpickr("#id_tanggal", {
+            dateFormat: "Y-m-d",
             allowInput: true,
             theme: "dark",
-            placeholder: "Pilih Waktu..."
+            placeholder: "Pilih Tanggal...",
+            defaultDate: "today"
         });
 
-        // Gauge Chart for Prediction Result
-        {% if result %}
-        const ctx = document.getElementById('gaugeChart').getContext('2d');
-        const value = {{ result|default:0 }};
-        const threshold = {{ threshold|default:88.3 }};
-        
-        // Define ranges: 80m to 95m (typical Bajulmati range)
-        const minVal = 85; 
-        const maxVal = 90;
-        
-        // Normalize value for doughnut (0 to 180 degrees)
-        // We'll use a doughnut chart with circumfrence 180
-        const dataValue = Math.min(Math.max(value, minVal), maxVal);
-        
-        const chartColor = value >= 91.30 ? '#dc3545' : value >= 89.487 ? '#c68a00' : value >= 87.60 ? '#28a745' : '#ffffff';
+        // Clear form functionality
+        const clearBtn = document.getElementById('clear-btn');
+        const form = document.getElementById('observation-form');
+        const inputs = document.querySelectorAll('#observation-form input, #observation-form select');
 
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                datasets: [{
-                    data: [dataValue - minVal, maxVal - dataValue],
-                    backgroundColor: [
-                        chartColor,
-                        'rgba(255, 255, 255, 0.05)'
-                    ],
-                    borderWidth: 0,
-                    circumference: 180,
-                    rotation: 270,
-                    borderRadius: 10,
-                    cutout: '85%'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false }
-                }
+        if (clearBtn && form) {
+            clearBtn.addEventListener('click', function() {
+                form.reset();
+                inputs.forEach(input => {
+                    input.style.borderColor = ''; // Clear custom border validations
+                });
+            });
+        }
+
+        // Add visual validation markers
+        inputs.forEach(input => {
+            if (input.type !== 'submit' && input.type !== 'button' && input.type !== 'hidden') {
+                input.addEventListener('input', function() {
+                    if (this.checkValidity() && this.value !== '') {
+                        this.style.borderColor = '#22c55e'; // Green boundary
+                    } else if (!this.checkValidity()) {
+                        this.style.borderColor = '#ef4444'; // Red boundary
+                    } else {
+                        this.style.borderColor = '';
+                    }
+                });
+
+                input.addEventListener('blur', function() {
+                    if (this.value === '') {
+                        this.style.borderColor = '';
+                    }
+                });
             }
         });
-        {% endif %}
     });
 </script>
 {% endblock %}

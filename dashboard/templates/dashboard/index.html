@@ -96,33 +96,67 @@
     </script>
 
     <!-- KPI Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        <!-- KPI 1 -->
-        <div
-            class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
-            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Total Prediksi</div>
-            <div class="font-display-lg text-display-lg text-on-surface">{{ total_predictions }}</div>
-        </div>
-        <!-- KPI 2 -->
-        <div
-            class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
-            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Prediksi Hari Ini</div>
-            <div class="font-display-lg text-display-lg text-on-surface">{{ today_predictions }}</div>
-        </div>
-        <!-- KPI 3 -->
-        <div
-            class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
-            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Status BAHAYA / DARURAT</div>
-            <div class="flex items-baseline gap-2">
-                <div class="font-display-lg text-display-lg text-error {% if danger_count > 0 %}pulse-bahaya{% endif %} inline-block">
-                    {{ danger_count }}</div>
+    <div class="space-y-gutter">
+        <!-- Row 1: General Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+            <!-- KPI 1 -->
+            <div
+                class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Total Prediksi</div>
+                <div class="font-display-lg text-display-lg text-on-surface">{{ total_predictions }}</div>
+            </div>
+            <!-- KPI 2 -->
+            <div
+                class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Prediksi Hari Ini</div>
+                <div class="font-display-lg text-display-lg text-on-surface">{{ today_predictions }}</div>
+            </div>
+            <!-- KPI 3 -->
+            <div
+                class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Model Aktif</div>
+                <div class="font-data-mono text-data-mono text-on-surface text-lg mt-2">LSTM-Attn</div>
             </div>
         </div>
-        <!-- KPI 4 -->
-        <div
-            class="bg-surface-container border border-outline-variant rounded p-sm hover:bg-surface-container-highest transition-colors duration-200">
-            <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase">Model Aktif</div>
-            <div class="font-data-mono text-data-mono text-on-surface text-lg mt-2">LSTM-Attn v2.0</div>
+
+        <!-- Row 2: Status Breakdown -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+            <!-- AMAN Card -->
+            <div
+                class="bg-surface-container border border-outline-variant/40 rounded p-sm hover:bg-surface-container-highest hover:border-white/30 transition-all duration-200 border-l-4 border-l-white">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-white"></span>
+                    Status Aman
+                </div>
+                <div class="font-display-lg text-display-lg text-white">{{ aman_count }}</div>
+            </div>
+            <!-- WASPADA Card -->
+            <div
+                class="bg-surface-container border border-outline-variant/40 rounded p-sm hover:bg-surface-container-highest hover:border-green-500/30 transition-all duration-200 border-l-4 border-l-green-500">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                    Status Waspada
+                </div>
+                <div class="font-display-lg text-display-lg text-green-400">{{ waspada_count }}</div>
+            </div>
+            <!-- SIAGA Card -->
+            <div
+                class="bg-surface-container border border-outline-variant/40 rounded p-sm hover:bg-surface-container-highest hover:border-amber-500/30 transition-all duration-200 border-l-4 border-l-amber-500">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    Status Siaga
+                </div>
+                <div class="font-display-lg text-display-lg text-amber-400">{{ siaga_count }}</div>
+            </div>
+            <!-- AWAS Card -->
+            <div
+                class="bg-surface-container border border-outline-variant/40 rounded p-sm hover:bg-surface-container-highest hover:border-red-500/30 transition-all duration-200 border-l-4 border-l-red-500">
+                <div class="font-label-caps text-label-caps text-on-surface-variant mb-2 uppercase flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 {% if awas_count > 0 %}animate-pulse{% endif %}"></span>
+                    Status Awas
+                </div>
+                <div class="font-display-lg text-display-lg text-red-400 {% if awas_count > 0 %}pulse-bahaya{% endif %}">{{ awas_count }}</div>
+            </div>
         </div>
     </div>
 

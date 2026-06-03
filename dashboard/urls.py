@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('', views.index_view, name='index'),
     path('input-data/', views.predict_view, name='input_data'),
+    path('input-data/delete/<int:id>/', views.delete_observation_view, name='delete_observation'),
     path('prediksi/', views.batch_predict_view, name='prediksi'),
     path('history/', views.history_view, name='history'),
     path('model/', views.model_info_view, name='model_info'),

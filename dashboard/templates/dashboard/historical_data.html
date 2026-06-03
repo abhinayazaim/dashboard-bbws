@@ -3,9 +3,17 @@
 {% block title %}Data Historis - Bajulmati Dam{% endblock %}
 
 {% block content %}
-<div class="mb-lg">
-    <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Data Historis Aktual</h2>
-    <p class="font-body-md text-body-md text-on-surface-variant">Cari dan lihat data aktual waduk Bajulmati berdasarkan tanggal tertentu di masa lalu.</p>
+<div class="flex justify-between items-center mb-lg">
+    <div>
+        <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Data Historis Aktual</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant">Cari dan lihat data aktual waduk Bajulmati berdasarkan tanggal tertentu di masa lalu.</p>
+    </div>
+    <div>
+        <a href="{% url 'input_data' %}" class="flex items-center gap-xs px-4 py-2.5 bg-primary-container hover:bg-primary-container/80 text-[#e0e0e0] font-label-caps text-label-caps rounded transition-colors text-center">
+            <span class="material-symbols-outlined text-[18px]">add</span>
+            TAMBAH DATA BARU
+        </a>
+    </div>
 </div>
 
 <!-- Search Form -->
@@ -38,6 +46,7 @@
                     <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">Debit Kanan (l/s)</th>
                     <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">Debit Kiri (l/s)</th>
                     <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">Status</th>
+                    <th class="py-sm px-margin font-label-md text-label-md text-on-surface-variant uppercase">Sumber</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-[#333333]">
@@ -60,11 +69,18 @@
                                 <span class="status-badge-custom status-badge-aman">AMAN</span>
                             {% endif %}
                         </td>
+                        <td class="py-md px-margin font-body-sm text-on-surface">
+                            {% if row.source == 'Database' %}
+                                <span class="text-xs text-primary bg-primary-container/20 border border-primary/30 px-2 py-0.5 rounded font-semibold">Input Manual</span>
+                            {% else %}
+                                <span class="text-xs text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">Dataset CSV</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="6" class="py-xl text-center text-on-surface-variant font-body-md">
+                        <td colspan="7" class="py-xl text-center text-on-surface-variant font-body-md">
                             {% if target_date %}
                                 Tidak ada data yang ditemukan untuk tanggal tersebut.
                             {% else %}

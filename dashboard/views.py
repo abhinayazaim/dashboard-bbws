@@ -51,7 +51,11 @@ def index_view(request):
     total_predictions = LogPrediksi.objects.count()
     today = timezone.now().date()
     today_predictions = LogPrediksi.objects.filter(created_at__date=today).count()
-    danger_count = LogPrediksi.objects.filter(status__in=['Siaga', 'Awas']).count()
+    
+    aman_count = LogPrediksi.objects.filter(status='Aman').count()
+    waspada_count = LogPrediksi.objects.filter(status='Waspada').count()
+    siaga_count = LogPrediksi.objects.filter(status='Siaga').count()
+    awas_count = LogPrediksi.objects.filter(status='Awas').count()
 
     # Last 50 for chart
     last_50 = list(LogPrediksi.objects.order_by('-created_at', '-id')[:50])
@@ -87,7 +91,10 @@ def index_view(request):
     context = {
         'total_predictions': total_predictions,
         'today_predictions': today_predictions,
-        'danger_count': danger_count,
+        'aman_count': aman_count,
+        'waspada_count': waspada_count,
+        'siaga_count': siaga_count,
+        'awas_count': awas_count,
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
         'threshold': threshold,
@@ -178,7 +185,27 @@ def predict_view(request):
             )
             messages.success(request, 'Data harian berhasil disimpan ke database.')
             return redirect('input_data')
-    return render(request, 'dashboard/input_data.html', {'form': form})
+
+    # Query all DataBendungan records, ordered by date descending
+    records_list = DataBendungan.objects.all().order_by('-tanggal')
+    paginator = Paginator(records_list, 10)  # 10 records per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'dashboard/input_data.html', {
+        'form': form,
+        'page_obj': page_obj,
+    })
+
+
+def delete_observation_view(request, id):
+    """Delete a DataBendungan observation record."""
+    if request.method == 'POST':
+        record = get_object_or_404(DataBendungan, id=id)
+        tanggal_str = record.tanggal.strftime('%Y-%m-%d')
+        record.delete()
+        messages.success(request, f'Data observasi tanggal {tanggal_str} berhasil dihapus.')
+    return redirect('input_data')
 
 
 def batch_predict_view(request):
@@ -453,13 +480,66 @@ def export_pdf_view(request):
     return export_history_to_pdf(request)
 
 def historical_data_view(request):
-    """View to query and display historical data from the original dataset."""
+    """View to query and display historical data from the original dataset and manual DB logs."""
     target_date = request.GET.get('target_date', '')
     data = []
     
     if target_date:
         engine = MLEngine()
+        # 1. Fetch CSV records
         data = engine.get_historical_data(target_date)
+        # Ensure all CSV items have a source tag
+        for item in data:
+            item['source'] = 'CSV'
+
+        # 2. Fetch database records for the target date
+        try:
+            db_records = DataBendungan.objects.filter(tanggal=target_date)
+            for r in db_records:
+                # Map jam_kode to standard time formats
+                if r.jam_kode == 0 or r.jam_kode == 6:
+                    time_str = "06:00"
+                elif r.jam_kode == 1 or r.jam_kode == 12:
+                    time_str = "12:00"
+                elif r.jam_kode == 2 or r.jam_kode == 18 or r.jam_kode == 17:
+                    time_str = "18:00"
+                else:
+                    time_str = f"{int(r.jam_kode):02d}:00"
+                
+                datetime_str = f"{r.tanggal.strftime('%Y-%m-%d')} {time_str}"
+                
+                # Determine status from TMA
+                tma_val = r.tma
+                if tma_val < 87.60:
+                    status_val = "Aman"
+                elif tma_val < 89.487:
+                    status_val = "Waspada"
+                elif tma_val < 91.30:
+                    status_val = "Siaga"
+                else:
+                    status_val = "Awas"
+                    
+                db_item = {
+                    'datetime': datetime_str,
+                    'tma_m': tma_val,
+                    'curah_hujan_mm': r.curah_hujan_mm,
+                    'smd_kanan_q_ls': r.smd_kanan_q_ls,
+                    'smd_kiri_q_ls': r.smd_kiri_q_ls,
+                    'status': status_val,
+                    'source': 'Database'
+                }
+                
+                # Override if datetime already exists in CSV
+                existing_idx = next((i for i, item in enumerate(data) if item['datetime'] == datetime_str), None)
+                if existing_idx is not None:
+                    data[existing_idx] = db_item
+                else:
+                    data.append(db_item)
+            
+            # Sort by datetime string ascending
+            data.sort(key=lambda x: x['datetime'])
+        except Exception as e:
+            print(f"Error merging DB records in historical_data_view: {e}")
         
     context = {
         'target_date': target_date,

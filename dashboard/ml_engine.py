@@ -13,9 +13,7 @@ from django.conf import settings
 class FeatureWiseAttention(Layer):
     """Custom attention layer used in the trained LSTM model.
     
-    Receives [lstm_output (batch, T, H), raw_input (batch, T, F)].
-    Computes attention weights from lstm_output, applies to raw_input.
-    Output shape: (batch, T, F) — same as raw_input.
+    Supports both v1 and v2 architectures.
     """
     def __init__(self, n_features=None, **kwargs):
         super(FeatureWiseAttention, self).__init__(**kwargs)
@@ -30,7 +28,7 @@ class FeatureWiseAttention(Layer):
         n_feat = self.n_features if self.n_features is not None else 11
         self.W = self.add_weight(name='attention_weight',
                                  shape=(lstm_shape[-1], n_feat),
-                                 initializer='random_normal',
+                                 initializer='glorot_uniform' if n_feat == 5 else 'random_normal',
                                  trainable=True)
         self.b = self.add_weight(name='attention_bias',
                                  shape=(n_feat,),
@@ -38,19 +36,34 @@ class FeatureWiseAttention(Layer):
                                  trainable=True)
         super(FeatureWiseAttention, self).build(input_shape)
 
-    def call(self, inputs):
-        if isinstance(inputs, (list, tuple)):
-            lstm_out = inputs[0]   # (batch, T, H)
-            raw_input = inputs[1]  # (batch, T, F)
+    def call(self, lstm_output, original_input=None):
+        if original_input is None:
+            if isinstance(lstm_output, (list, tuple)):
+                lstm_out = lstm_output[0]
+                raw_input = lstm_output[1]
+            else:
+                lstm_out = lstm_output
+                raw_input = lstm_output
         else:
-            lstm_out = inputs
-            raw_input = inputs
+            lstm_out = lstm_output
+            raw_input = original_input
 
-        e = tf.keras.backend.tanh(tf.keras.backend.dot(lstm_out, self.W) + self.b)
-        alpha = tf.keras.backend.softmax(e) # (batch, T, F)
-
-        context = raw_input * alpha  # (batch, T, F)
-        return context
+        if self.n_features == 5:
+            # V2 model (Jupyter notebook): linear projection
+            score = tf.matmul(lstm_out, self.W) + self.b
+            alpha = tf.nn.softmax(score, axis=-1)
+            weighted = alpha * raw_input
+            self.last_attention_weights = alpha
+            if original_input is None and isinstance(lstm_output, (list, tuple)):
+                return weighted
+            return weighted, alpha
+        else:
+            # V1 model: tanh projection
+            e = tf.keras.backend.tanh(tf.keras.backend.dot(lstm_out, self.W) + self.b)
+            alpha = tf.keras.backend.softmax(e)
+            context = raw_input * alpha
+            self.last_attention_weights = alpha
+            return context
 
     def get_config(self):
         config = super(FeatureWiseAttention, self).get_config()
@@ -189,59 +202,87 @@ class MLEngine:
                 config = json.loads(z.read('config.json'))
 
             layers_config = config['config']['layers']
-            layer_map = {}
-            for lc in layers_config:
-                layer_map[lc['name']] = lc
+            layer_map = {lc['name']: lc for lc in layers_config}
 
-            # Reconstruct the architecture based on the saved config
             look_back = self.get_look_back()
             n_features = self.metadata.get('n_features', len(self.all_cols)) if self.metadata else len(self.all_cols)
+            
+            # Detect v2 model (delta TMA, 5 features)
+            model_name = config.get('config', {}).get('name', '')
+            is_v2 = 'v2' in model_name or 'delta' in model_name or n_features == 5
+
+            # Reconstruct the architecture based on the saved config
             inp = Input(shape=(look_back, n_features), name='input_sequence')
 
-            # LSTM 1: returns sequences, 128 units
-            lstm1_cfg = layer_map['lstm_1']['config']
-            x = LSTM(lstm1_cfg.get('units', 128),
-                     return_sequences=True, name='lstm_1')(inp)
-            x = Dropout(layer_map['dropout_1']['config'].get('rate', 0.2),
-                        name='dropout_1')(x)
+            if is_v2:
+                # LSTM 1: 128 units, return sequences
+                x = LSTM(128, return_sequences=True, name='lstm_1')(inp)
+                x = Dropout(layer_map.get('dropout_1', {}).get('config', {}).get('rate', 0.2), name='dropout_1')(x)
 
-            # FeatureWiseAttention: takes [lstm_out, raw_input]
-            attn = FeatureWiseAttention(n_features=n_features,
-                                        name='feature_attention')([x, inp])
+                # FeatureWiseAttention: takes lstm_output, original_input as positional
+                attn_layer = FeatureWiseAttention(n_features=n_features, name='feature_attention')
+                x, attn = attn_layer(x, inp)
 
-            # LSTM 2: 64 units, takes attention output, returns sequences
-            lstm2_cfg = layer_map['lstm_2']['config']
-            x2 = LSTM(lstm2_cfg.get('units', 64),
-                      return_sequences=True, name='lstm_2')(attn)
-            x2 = Dropout(layer_map['dropout_2']['config'].get('rate', 0.2),
-                         name='dropout_2')(x2)
+                # LSTM 2: 64 units, return sequences
+                x = LSTM(64, return_sequences=True, name='lstm_2')(x)
+                x = Dropout(layer_map.get('dropout_2', {}).get('config', {}).get('rate', 0.2), name='dropout_2')(x)
 
-            # LSTM 3: 32 units, returns single vector
-            lstm3_cfg = layer_map['lstm_3']['config']
-            x3 = LSTM(lstm3_cfg.get('units', 32),
-                      return_sequences=False, name='lstm_3')(x2)
-            x3 = Dropout(layer_map['dropout_3']['config'].get('rate', 0.2),
-                         name='dropout_3')(x3)
+                # LSTM 3: 32 units, return single vector
+                x = LSTM(32, return_sequences=False, name='lstm_3')(x)
+                x = Dropout(layer_map.get('dropout_3', {}).get('config', {}).get('rate', 0.2), name='dropout_3')(x)
 
-            # Dense layers
-            x3 = Dropout(layer_map.get('dropout_pre_dense', {}).get('config', {}).get('rate', 0.2),
-                         name='dropout_pre_dense')(x3)
-            d1_cfg = layer_map['dense_1']['config']
-            x3 = Dense(d1_cfg.get('units', 32),
-                       activation=d1_cfg.get('activation', 'relu'),
-                       name='dense_1')(x3)
-            d2_cfg = layer_map['dense_2']['config']
-            x3 = Dense(d2_cfg.get('units', 32),
-                       activation=d2_cfg.get('activation', 'relu'),
-                       name='dense_2')(x3)
+                # Dense layers
+                x = Dropout(layer_map.get('dropout_pre_dense', {}).get('config', {}).get('rate', 0.1), name='dropout_pre_dense')(x)
+                x = Dense(32, activation='relu', name='dense_1')(x)
+                x = Dense(16, activation='relu', name='dense_2')(x)
+                output = Dense(1, activation='linear', name='output')(x)
 
-            out_cfg = layer_map['output']['config']
-            output = Dense(out_cfg.get('units', 1),
-                           activation=out_cfg.get('activation', 'linear'),
-                           name='output')(x3)
+                model = tf.keras.Model(inputs=inp, outputs=[output, attn], name='LSTM_FeatureAttention_v2_delta')
+            else:
+                # LSTM 1: returns sequences, 128 units
+                lstm1_cfg = layer_map['lstm_1']['config']
+                x = LSTM(lstm1_cfg.get('units', 128),
+                         return_sequences=True, name='lstm_1')(inp)
+                x = Dropout(layer_map['dropout_1']['config'].get('rate', 0.2),
+                            name='dropout_1')(x)
 
-            model = tf.keras.Model(inputs=inp, outputs=[output, attn],
-                                   name='LSTM_FeatureAttention')
+                # FeatureWiseAttention: takes [lstm_out, raw_input]
+                attn_layer = FeatureWiseAttention(n_features=n_features, name='feature_attention')
+                attn = attn_layer([x, inp])
+
+                # LSTM 2: 64 units, takes attention output, returns sequences
+                lstm2_cfg = layer_map['lstm_2']['config']
+                x2 = LSTM(lstm2_cfg.get('units', 64),
+                          return_sequences=True, name='lstm_2')(attn)
+                x2 = Dropout(layer_map['dropout_2']['config'].get('rate', 0.2),
+                             name='dropout_2')(x2)
+
+                # LSTM 3: 32 units, returns single vector
+                lstm3_cfg = layer_map['lstm_3']['config']
+                x3 = LSTM(lstm3_cfg.get('units', 32),
+                          return_sequences=False, name='lstm_3')(x2)
+                x3 = Dropout(layer_map['dropout_3']['config'].get('rate', 0.2),
+                             name='dropout_3')(x3)
+
+                # Dense layers
+                x3 = Dropout(layer_map.get('dropout_pre_dense', {}).get('config', {}).get('rate', 0.2),
+                             name='dropout_pre_dense')(x3)
+                d1_cfg = layer_map['dense_1']['config']
+                x3 = Dense(d1_cfg.get('units', 32),
+                           activation=d1_cfg.get('activation', 'relu'),
+                           name='dense_1')(x3)
+                d2_cfg = layer_map['dense_2']['config']
+                x3 = Dense(d2_cfg.get('units', 32),
+                           activation=d2_cfg.get('activation', 'relu'),
+                           name='dense_2')(x3)
+
+                out_cfg = layer_map['output']['config']
+                output = Dense(out_cfg.get('units', 1),
+                               activation=out_cfg.get('activation', 'linear'),
+                               name='output')(x3)
+
+                model = tf.keras.Model(inputs=inp, outputs=[output, attn],
+                                       name='LSTM_FeatureAttention')
 
             # Load weights from the .keras archive
             temp_dir = os.path.join(os.path.dirname(model_path), '_temp_weights')
@@ -256,25 +297,40 @@ class MLEngine:
                     layers_group = f['layers']
                     
                     def set_layer_w(model_layer, h5_layer_name, is_lstm=False):
-                        if is_lstm:
-                            vars_grp = layers_group[h5_layer_name]['cell']['vars']
-                            model.get_layer(model_layer).set_weights([
-                                vars_grp['0'][()], vars_grp['1'][()], vars_grp['2'][()]
-                            ])
-                        else:
-                            vars_grp = layers_group[h5_layer_name]['vars']
-                            model.get_layer(model_layer).set_weights([
-                                vars_grp['0'][()], vars_grp['1'][()]
-                            ])
+                        try:
+                            l_grp = layers_group.get(h5_layer_name) or layers_group.get(model_layer)
+                            if l_grp is None:
+                                return
+                            if is_lstm:
+                                cell_grp = l_grp.get('cell')
+                                vars_grp = cell_grp['vars'] if (cell_grp and 'vars' in cell_grp) else l_grp['vars']
+                                model.get_layer(model_layer).set_weights([
+                                    vars_grp['0'][()], vars_grp['1'][()], vars_grp['2'][()]
+                                ])
+                            else:
+                                vars_grp = l_grp['vars']
+                                model.get_layer(model_layer).set_weights([
+                                    vars_grp['0'][()], vars_grp['1'][()]
+                                ])
+                        except Exception as el:
+                            print(f"Failed to load weights for {model_layer}: {el}")
 
-                    # Map Keras 2 H5 names to Keras 3 Model names
-                    set_layer_w('lstm_1', 'lstm', is_lstm=True)
-                    set_layer_w('lstm_2', 'lstm_1', is_lstm=True)
-                    set_layer_w('lstm_3', 'lstm_2', is_lstm=True)
-                    set_layer_w('feature_attention', 'feature_wise_attention', is_lstm=False)
-                    set_layer_w('dense_1', 'dense', is_lstm=False)
-                    set_layer_w('dense_2', 'dense_1', is_lstm=False)
-                    set_layer_w('output', 'dense_2', is_lstm=False)
+                    if is_v2:
+                        set_layer_w('lstm_1', 'lstm_1', is_lstm=True)
+                        set_layer_w('lstm_2', 'lstm_2', is_lstm=True)
+                        set_layer_w('lstm_3', 'lstm_3', is_lstm=True)
+                        set_layer_w('feature_attention', 'feature_attention', is_lstm=False)
+                        set_layer_w('dense_1', 'dense_1', is_lstm=False)
+                        set_layer_w('dense_2', 'dense_2', is_lstm=False)
+                        set_layer_w('output', 'output', is_lstm=False)
+                    else:
+                        set_layer_w('lstm_1', 'lstm', is_lstm=True)
+                        set_layer_w('lstm_2', 'lstm_1', is_lstm=True)
+                        set_layer_w('lstm_3', 'lstm_2', is_lstm=True)
+                        set_layer_w('feature_attention', 'feature_wise_attention', is_lstm=False)
+                        set_layer_w('dense_1', 'dense', is_lstm=False)
+                        set_layer_w('dense_2', 'dense_1', is_lstm=False)
+                        set_layer_w('output', 'dense_2', is_lstm=False)
                     
                 print("Weights loaded successfully via manual H5 mapping.")
             else:
@@ -690,13 +746,24 @@ class MLEngine:
         Trains a new LSTM model, compares val_loss, and updates ModelRegistry.
         """
         import threading
-        from .models import DataBendungan, ModelRegistry
-        import time
 
         def run_training():
+            import shutil
+            from django.db import close_old_connections
+            from .models import DataBendungan, ModelRegistry
+            from sklearn.preprocessing import MinMaxScaler
+            from tensorflow.keras.models import Model
+            from tensorflow.keras.layers import Input, LSTM, Dense, Dropout
+            from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+            from tensorflow.keras.optimizers import Adam
+
+            close_old_connections()
             print("Starting continuous training background thread...")
-            # Here we simulate the process for the dashboard architecture update
-            # In a real scenario, this would load data, split train/test, model.fit(), etc.
+            
+            # Paths
+            model_dir = os.path.join(settings.BASE_DIR, 'models')
+            candidate_dir = os.path.join(model_dir, 'candidate')
+            os.makedirs(candidate_dir, exist_ok=True)
             
             # 1. Fetch historical CSV
             dataset_path = os.path.join(settings.BASE_DIR, 'Bajulmati_Dataset_2018_2026_Imputed.csv')
@@ -706,50 +773,431 @@ class MLEngine:
                 print(f"Training failed: could not load base dataset: {e}")
                 return
 
-            # 2. Fetch recent DataBendungan
-            recent_data = list(DataBendungan.objects.all().values())
-            if recent_data:
-                recent_df = pd.DataFrame(recent_data)
-                # Concatenate conceptually
-                print(f"Concatenated base dataset with {len(recent_df)} new records.")
+            # 2. Fetch recent DataBendungan from DB
+            db_rows = []
+            try:
+                records = DataBendungan.objects.all().order_by('tanggal')
+                for r in records:
+                    # map jam_kode to hour values
+                    if r.jam_kode == 0.0 or r.jam_kode == 6.0:
+                        hour_val = 7.0
+                    elif r.jam_kode == 1.0 or r.jam_kode == 12.0:
+                        hour_val = 12.0
+                    elif r.jam_kode == 2.0 or r.jam_kode == 18.0 or r.jam_kode == 16.0 or r.jam_kode == 17.0:
+                        hour_val = 17.0
+                    else:
+                        hour_val = float(r.jam_kode)
 
-            # Simulate training delay
-            time.sleep(10) 
+                    # map cuaca_kode to notebook cuaca codes
+                    if r.cuaca_kode == 0.0:
+                        c_code = 1.0
+                    elif r.cuaca_kode == 1.0:
+                        c_code = 2.0
+                    elif r.cuaca_kode == 2.0:
+                        c_code = 4.0
+                    else:
+                        c_code = float(r.cuaca_kode)
+
+                    dt_str = f"{r.tanggal.strftime('%Y-%m-%d')} {int(hour_val):02d}:00"
+
+                    db_rows.append({
+                        'datetime': dt_str,
+                        'tma_m': r.tma,
+                        'curah_hujan_mm': r.curah_hujan_mm,
+                        'cuaca_kode': c_code,
+                        'smd_kanan_q_ls': r.smd_kanan_q_ls,
+                        'smd_kiri_q_ls': r.smd_kiri_q_ls,
+                        'jam_kode': hour_val,
+                        'tahun': r.tanggal.year,
+                        'bulan': r.tanggal.strftime('%B')
+                    })
+            except Exception as e:
+                print(f"Error reading DataBendungan records: {e}")
+
+            # 3. Concatenate and sort
+            if db_rows:
+                db_df = pd.DataFrame(db_rows)
+                db_df['datetime'] = pd.to_datetime(db_df['datetime'])
+                base_df['datetime'] = pd.to_datetime(base_df['datetime'])
+                df = pd.concat([base_df, db_df], ignore_index=True)
+                print(f"Concatenated base dataset with {len(db_df)} new records.")
+            else:
+                df = base_df
+                df['datetime'] = pd.to_datetime(df['datetime'])
+
+            # Standardize and clean
+            df = df.drop_duplicates(subset=['datetime'], keep='last')
+            df = df.sort_values('datetime').reset_index(drop=True)
             
-            # 3. Dummy Evaluation (simulate val_loss from new training)
-            # Fetch active model to compare
-            active_model = ModelRegistry.objects.filter(is_active=True).first()
-            current_loss = active_model.val_loss if active_model and active_model.val_loss else 0.05
+            # Standardize jam_kode
+            df['jam_kode'] = df['jam_kode'].replace(16, 17)
+
+            # Feature Engineering
+            df['delta_tma'] = df['tma_m'].diff().fillna(0.0)
+            df['smd_avg'] = (df['smd_kanan_q_ls'] + df['smd_kiri_q_ls']) / 2.0
+            df['curah_hujan_log'] = np.log1p(df['curah_hujan_mm'])
+            df['delta_tma_lag1'] = df['delta_tma'].shift(1)
+
+            # Drop the first row due to delta_tma_lag1 shift NaN
+            df = df.dropna(subset=['delta_tma_lag1']).reset_index(drop=True)
+
+            TARGET_COL = 'delta_tma'
+            FEATURE_COLS = [
+                'curah_hujan_log',
+                'cuaca_kode',
+                'smd_avg',
+                'delta_tma_lag1',
+                'jam_kode',
+            ]
+            ALL_COLS = [TARGET_COL] + FEATURE_COLS
+
+            print(f"Preprocessed dataset rows: {len(df)}")
+
+            # 4. Scaling
+            data_values = df[ALL_COLS].values
+            scaler_all = MinMaxScaler(feature_range=(0, 1))
+            scaled_all = scaler_all.fit_transform(data_values)
+
+            scaler_target = MinMaxScaler(feature_range=(0, 1))
+            scaler_target.fit(data_values[:, 0].reshape(-1, 1))
+
+            # 5. Sliding sequence windows
+            LOOK_BACK = 48
+            n_features = len(FEATURE_COLS)
+
+            X_list, y_list = [], []
+            for i in range(len(scaled_all) - LOOK_BACK):
+                X_list.append(scaled_all[i : i + LOOK_BACK, 1:])
+                y_list.append(scaled_all[i + LOOK_BACK, 0])
             
-            # Candidate loss could be better or worse (simulate random fluctuation around current loss)
-            candidate_loss = current_loss * np.random.uniform(0.8, 1.1)
+            X_all = np.array(X_list, dtype=np.float32)
+            y_all = np.array(y_list, dtype=np.float32)
 
-            print(f"Evaluation complete. Current loss: {current_loss:.5f}, Candidate loss: {candidate_loss:.5f}")
+            tma_m_raw = df['tma_m'].values
+            tma_prev_all = tma_m_raw[LOOK_BACK - 1 : len(df) - 1]
+            tma_true_all = tma_m_raw[LOOK_BACK:]
 
-            # 4. Decision
-            if candidate_loss < current_loss:
-                # Better! Replace
-                import uuid
-                new_version = f"LSTM_v{str(uuid.uuid4())[:6]}"
-                
-                # Deactivate old
-                if active_model:
-                    active_model.is_active = False
-                    active_model.save()
-                
-                # Register new
-                ModelRegistry.objects.create(
-                    version_name=new_version,
-                    val_loss=candidate_loss,
-                    rmse=candidate_loss * 10, # arbitrary relation
-                    mae=candidate_loss * 8,
-                    look_back=self.get_look_back(),
-                    threshold=self.get_threshold(),
-                    is_active=True
+            # 6. Split temporal (70% Train, 15% Val, 15% Test)
+            n_samples = len(X_all)
+            train_end = int(n_samples * 0.70)
+            val_end = int(n_samples * 0.85)
+
+            X_train, y_train = X_all[:train_end], y_all[:train_end]
+            X_val, y_val = X_all[train_end:val_end], y_all[train_end:val_end]
+            X_test, y_test = X_all[val_end:], y_all[val_end:]
+
+            tma_prev_val = tma_prev_all[train_end:val_end]
+            tma_true_val = tma_true_all[train_end:val_end]
+
+            tma_prev_test = tma_prev_all[val_end:]
+            tma_true_test = tma_true_all[val_end:]
+
+            dt_all = df['datetime'].values[LOOK_BACK:]
+            dt_train = dt_all[:train_end]
+            dt_val = dt_all[train_end:val_end]
+            train_end_date = pd.Timestamp(dt_train[-1]).strftime('%Y-%m-%d')
+            val_end_date = pd.Timestamp(dt_val[-1]).strftime('%Y-%m-%d')
+
+            # 7. Build Model
+            inputs = Input(shape=(LOOK_BACK, n_features), name='input_sequence')
+            x = LSTM(128, return_sequences=True, name='lstm_1')(inputs)
+            x = Dropout(0.2, name='dropout_1')(x)
+
+            # Attention layer
+            attn_layer = FeatureWiseAttention(n_features=n_features, name='feature_attention')
+            x, attention_weights = attn_layer(x, inputs)
+
+            x = LSTM(64, return_sequences=True, name='lstm_2')(x)
+            x = Dropout(0.2, name='dropout_2')(x)
+
+            x = LSTM(32, return_sequences=False, name='lstm_3')(x)
+            x = Dropout(0.2, name='dropout_3')(x)
+
+            x = Dropout(0.1, name='dropout_pre_dense')(x)
+            x = Dense(32, activation='relu', name='dense_1')(x)
+            x = Dense(16, activation='relu', name='dense_2')(x)
+            output = Dense(1, activation='linear', name='output')(x)
+
+            model = Model(
+                inputs=inputs,
+                outputs=[output, attention_weights],
+                name='LSTM_FeatureAttention_v2_delta'
+            )
+
+            # Compile
+            model.compile(
+                optimizer=Adam(learning_rate=0.001),
+                loss=['mse', None],
+                metrics=[['mae'], []]
+            )
+
+            # 8. Train Model
+            EPOCHS = 50
+            BATCH_SIZE = 64
+
+            # Dummy target for attention output
+            dummy_train = np.zeros((len(y_train), LOOK_BACK, n_features), dtype=np.float32)
+            dummy_val = np.zeros((len(y_val), LOOK_BACK, n_features), dtype=np.float32)
+
+            best_model_path = os.path.join(candidate_dir, 'best_model.keras')
+
+            callbacks = [
+                EarlyStopping(
+                    monitor='val_loss',
+                    patience=10,
+                    restore_best_weights=True,
+                    verbose=1,
+                    mode='min'
+                ),
+                ReduceLROnPlateau(
+                    monitor='val_loss',
+                    factor=0.5,
+                    patience=7,
+                    min_lr=1e-6,
+                    verbose=1,
+                    mode='min'
+                ),
+                ModelCheckpoint(
+                    filepath=best_model_path,
+                    monitor='val_loss',
+                    save_best_only=True,
+                    verbose=0,
+                    mode='min'
+                ),
+            ]
+
+            print(f"Training candidate model for max {EPOCHS} epochs...")
+            history = model.fit(
+                X_train,
+                [y_train, dummy_train],
+                validation_data=(X_val, [y_val, dummy_val]),
+                epochs=EPOCHS,
+                batch_size=BATCH_SIZE,
+                callbacks=callbacks,
+                verbose=0
+            )
+
+            epochs_trained = len(history.history['loss'])
+            print(f"Training completed in {epochs_trained} epochs.")
+
+            # Load the best saved candidate model
+            try:
+                best_model = tf.keras.models.load_model(
+                    best_model_path,
+                    custom_objects={'FeatureWiseAttention': FeatureWiseAttention},
+                    compile=False
                 )
-                print(f"SUCCESS: New model {new_version} promoted to production!")
+            except Exception as e_load:
+                print(f"Failed to load checkpoint model: {e_load}. Using fit memory weights.")
+                best_model = model
+
+            # Helper functions for metrics
+            def rmse_metric(y_t, y_p):
+                return float(np.sqrt(np.mean((y_t - y_p) ** 2)))
+
+            def mae_metric(y_t, y_p):
+                return float(np.mean(np.abs(y_t - y_p)))
+
+            def r2_metric(y_t, y_p):
+                ss_res = np.sum((y_t - y_p) ** 2)
+                ss_tot = np.sum((y_t - np.mean(y_t)) ** 2)
+                return float(1 - ss_res / ss_tot) if ss_tot != 0 else float('-inf')
+
+            def nse_metric(y_t, y_p):
+                num = np.sum((y_t - y_p) ** 2)
+                den = np.sum((y_t - np.mean(y_t)) ** 2)
+                return float(1 - num / den) if den != 0 else float('-inf')
+
+            def mape_metric(y_t, y_p, eps=1e-8):
+                return float(np.mean(np.abs((y_t - y_p) / (np.abs(y_t) + eps))) * 100)
+
+            def eval_clf_metrics(y_t, y_p, th_val):
+                bin_true = (y_t >= th_val).astype(int)
+                bin_pred = (y_p >= th_val).astype(int)
+                tp = np.sum((bin_true == 1) & (bin_pred == 1))
+                fp = np.sum((bin_true == 0) & (bin_pred == 1))
+                fn = np.sum((bin_true == 1) & (bin_pred == 0))
+                tn = np.sum((bin_true == 0) & (bin_pred == 0))
+                
+                accuracy = float((tp + tn) / len(y_t)) if len(y_t) > 0 else 0.0
+                precision = float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
+                recall = float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
+                f1 = float(2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+                return {
+                    'accuracy': accuracy,
+                    'precision': precision,
+                    'recall': recall,
+                    'f1': f1
+                }
+
+            # 9. Evaluate candidate
+            # Validation metrics
+            preds_scaled_val = best_model.predict(X_val, verbose=0)
+            val_preds_scaled = preds_scaled_val[0] if isinstance(preds_scaled_val, list) else preds_scaled_val
+            val_delta_pred = scaler_target.inverse_transform(val_preds_scaled).flatten()
+            val_pred_tma = tma_prev_val + val_delta_pred
+            
+            val_rmse = rmse_metric(tma_true_val, val_pred_tma)
+            val_mae = mae_metric(tma_true_val, val_pred_tma)
+            val_r2 = r2_metric(tma_true_val, val_pred_tma)
+            val_nse = nse_metric(tma_true_val, val_pred_tma)
+            
+            # The val_loss field for comparison: MSE of validation scaled delta_tma
+            val_mse_scaled = float(np.mean((y_val - val_preds_scaled.flatten()) ** 2))
+
+            # Test metrics
+            preds_scaled_test = best_model.predict(X_test, verbose=0)
+            if isinstance(preds_scaled_test, list):
+                test_preds_scaled = preds_scaled_test[0]
+                test_attn = preds_scaled_test[1]
+            else:
+                test_preds_scaled = preds_scaled_test
+                test_attn = np.ones((len(X_test), LOOK_BACK, n_features)) / n_features
+
+            test_delta_pred = scaler_target.inverse_transform(test_preds_scaled).flatten()
+            test_pred_tma = tma_prev_test + test_delta_pred
+
+            test_rmse = rmse_metric(tma_true_test, test_pred_tma)
+            test_mae = mae_metric(tma_true_test, test_pred_tma)
+            test_r2 = r2_metric(tma_true_test, test_pred_tma)
+            test_nse = nse_metric(tma_true_test, test_pred_tma)
+            test_mape = mape_metric(tma_true_test, test_pred_tma)
+
+            threshold = float(np.percentile(df['tma_m'].values, 90))
+            clf_metrics = eval_clf_metrics(tma_true_test, test_pred_tma, threshold)
+
+            # Average attention weights
+            avg_attention = np.mean(test_attn, axis=(0, 1))
+            attention_dict = dict(zip(FEATURE_COLS, avg_attention))
+
+            # Save other artifacts to candidate directory
+            with open(os.path.join(candidate_dir, 'scaler_all.pkl'), 'wb') as f:
+                pickle.dump(scaler_all, f)
+            with open(os.path.join(candidate_dir, 'scaler_target.pkl'), 'wb') as f:
+                pickle.dump(scaler_target, f)
+            
+            # Save list of columns
+            with open(os.path.join(candidate_dir, 'feature_cols.pkl'), 'wb') as f:
+                pickle.dump({
+                    'all_cols': ALL_COLS,
+                    'feature_cols': FEATURE_COLS,
+                    'target_col': TARGET_COL,
+                    'look_back': LOOK_BACK,
+                    'model_version': 'v2_delta_tma',
+                }, f)
+
+            np.save(os.path.join(candidate_dir, 'attention_weights.npy'), avg_attention)
+
+            seed_history = scaled_all[-LOOK_BACK:, 1:]
+            np.save(os.path.join(candidate_dir, 'seed_history.npy'), seed_history)
+
+            # Training predictions for metadata
+            preds_scaled_train = best_model.predict(X_train, verbose=0)
+            train_preds_scaled = preds_scaled_train[0] if isinstance(preds_scaled_train, list) else preds_scaled_train
+            train_delta_pred = scaler_target.inverse_transform(train_preds_scaled).flatten()
+            train_pred_tma = tma_prev_all[:train_end] + train_delta_pred
+
+            # Construct metadata
+            metadata = {
+                'model_version': 'v2_delta_tma',
+                'look_back': LOOK_BACK,
+                'n_features': n_features,
+                'feature_cols': FEATURE_COLS,
+                'all_cols': ALL_COLS,
+                'target_col': TARGET_COL,
+                'threshold': round(threshold, 4),
+                'threshold_method': 'percentile_90_full_dataset',
+                'reconstruction': '1-step-ahead teacher forcing: tma_pred(t) = tma_actual(t-1) + delta_pred(t)',
+                'train_end_date': train_end_date,
+                'val_end_date': val_end_date,
+                'metrics_on': 'TMA absolut rekonstruksi (bukan delta)',
+                'metrics': {
+                    'train_rmse': round(rmse_metric(tma_true_all[:train_end], train_pred_tma), 4),
+                    'train_mae': round(mae_metric(tma_true_all[:train_end], train_pred_tma), 4),
+                    'val_rmse': round(val_rmse, 4),
+                    'val_mae': round(val_mae, 4),
+                    'val_r2': round(val_r2, 4),
+                    'val_nse': round(val_nse, 4),
+                    'test_rmse': round(test_rmse, 4),
+                    'test_mae': round(test_mae, 4),
+                    'test_mape': round(test_mape, 4),
+                    'test_r2': round(test_r2, 4),
+                    'test_nse': round(test_nse, 4),
+                    'test_recall': round(clf_metrics['recall'], 4),
+                    'test_f1': round(clf_metrics['f1'], 4),
+                    'test_precision': round(clf_metrics['precision'], 4),
+                },
+                'attention_weights': {f: round(float(w), 6) for f, w in attention_dict.items()},
+                'trained_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'epochs_trained': epochs_trained,
+                'dataset_rows': len(df) + 1, # +1 for dropped shift NaN row
+                'df_model_rows': len(df),
+                'batch_size': BATCH_SIZE,
+            }
+
+            with open(os.path.join(candidate_dir, 'training_metadata.json'), 'w') as f:
+                json.dump(metadata, f, indent=2)
+
+            # 10. Compare and Promote
+            close_old_connections()
+            active_model = ModelRegistry.objects.filter(is_active=True).first()
+            
+            # Determine if current active model is v1
+            is_active_v1 = active_model and (active_model.look_back == 90 or 'v2' not in getattr(active_model, 'version_name', ''))
+            
+            if is_active_v1:
+                # Force promotion for v2 migration
+                current_val_loss = float('inf')
+                print("Active model is v1. Automatically promoting the new v2 model.")
+            else:
+                current_val_loss = active_model.val_loss if active_model and active_model.val_loss is not None else float('inf')
+
+            print(f"Evaluation complete. Current best loss: {current_val_loss:.5f}, Candidate loss: {val_mse_scaled:.5f}")
+
+            if val_mse_scaled < current_val_loss:
+                # Promote!
+                import uuid
+                new_version = f"LSTM_v2_{str(uuid.uuid4())[:6]}"
+                
+                # Copy candidate files to parent models directory
+                try:
+                    for filename in os.listdir(candidate_dir):
+                        src_path = os.path.join(candidate_dir, filename)
+                        dst_path = os.path.join(model_dir, filename)
+                        if os.path.isfile(src_path):
+                            shutil.copy2(src_path, dst_path)
+                    
+                    # Deactivate old model
+                    if active_model:
+                        active_model.is_active = False
+                        active_model.save()
+                    
+                    # Create registry entry
+                    ModelRegistry.objects.create(
+                        version_name=new_version,
+                        val_loss=val_mse_scaled,
+                        rmse=test_rmse,
+                        mae=test_mae,
+                        look_back=LOOK_BACK,
+                        threshold=threshold,
+                        is_active=True
+                    )
+                    print(f"SUCCESS: New model {new_version} promoted to production!")
+                    
+                    # Reload MLEngine artifacts
+                    self.load_model_artifacts()
+                except Exception as e_promote:
+                    print(f"Promotion failed: {e_promote}")
             else:
                 print("DISCARD: Candidate model did not improve validation loss.")
+
+            # Clean up candidate directory
+            try:
+                shutil.rmtree(candidate_dir, ignore_errors=True)
+            except Exception as e_clean:
+                print(f"Cleanup warning: {e_clean}")
+
+            close_old_connections()
 
         # Start thread
         t = threading.Thread(target=run_training)
