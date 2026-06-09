@@ -711,8 +711,11 @@ class MLEngine:
             # Convert to string to easily match 'YYYY-MM-DD'
             df['date_str'] = df['datetime'].astype(str).str[:10]
             
-            # Filter by date
-            filtered = df[df['date_str'] == target_date_str]
+            # Filter by date if provided
+            if target_date_str:
+                filtered = df[df['date_str'] == target_date_str]
+            else:
+                filtered = df
             
             if filtered.empty:
                 return []

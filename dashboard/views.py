@@ -479,71 +479,193 @@ def export_pdf_view(request):
     """Export filtered history to PDF."""
     return export_history_to_pdf(request)
 
+def export_dataset_csv_view(request):
+    """Export all prediction logs as a single dataset CSV, dropping duplicates."""
+    import pandas as pd
+    from django.http import HttpResponse
+    from django.contrib import messages
+    from django.shortcuts import redirect
+    
+    # Ambil semua data dari LogPrediksi (mencakup Batch Upload dan Manual Predict)
+    # Ini merepresentasikan semua data yang pernah diproses/dimasukkan user.
+    log_records = LogPrediksi.objects.all().order_by('waktu', '-created_at')
+    
+    if not log_records.exists():
+        messages.error(request, "Tidak ada data yang dapat diekspor.")
+        return redirect('history')
+        
+    log_data = []
+    for r in log_records:
+        dt_str = r.waktu.strftime('%Y-%m-%d %H:%M') if r.waktu else ''
+        log_data.append({
+            'datetime': dt_str,
+            'tma_m': r.tma_predicted,
+            'curah_hujan_mm': r.curah_hujan_mm,
+            'cuaca_kode': r.cuaca_kode,
+            'smd_kanan_q_ls': r.smd_kanan_q_ls,
+            'smd_kiri_q_ls': r.smd_kiri_q_ls,
+            'tma_lag1': r.tma_lag1,
+            'tma_lag2': r.tma_lag2,
+            'tma_lag3': r.tma_lag3,
+            'delta_tma': r.delta_tma,
+            'tma_rolling_mean_3': r.tma_rolling_mean_3,
+            'jam_kode': r.jam_kode,
+            'status': r.status,
+            'source': r.source,
+            'created_at': r.created_at
+        })
+        
+    df = pd.DataFrame(log_data)
+    
+    # Hindari duplikasi jika datanya sama.
+    subset_cols = ['datetime', 'curah_hujan_mm', 'cuaca_kode', 'smd_kanan_q_ls', 'smd_kiri_q_ls', 'jam_kode', 'tma_m']
+    df = df.drop_duplicates(subset=subset_cols, keep='first')
+    
+    # Konversi ke datetime asli untuk sorting kronologis
+    df['datetime_dt'] = pd.to_datetime(df['datetime'], errors='coerce')
+    df = df.sort_values(by=['datetime_dt', 'created_at'])
+    
+    # Clean up temporary columns
+    df = df.drop(columns=['datetime_dt', 'created_at'])
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="Bajulmati_Dataset_Gabungan.csv"'
+    
+    df.to_csv(response, index=False)
+    return response
+
+def export_actual_dataset_csv_view(request):
+    """Export the actual dataset (Base CSV + DataBendungan manual inputs)."""
+    import pandas as pd
+    from django.http import HttpResponse
+    from django.contrib import messages
+    from django.shortcuts import redirect
+    
+    engine = MLEngine()
+    try:
+        data = engine.get_historical_data('')
+    except Exception as e:
+        messages.error(request, f"Gagal mengambil data historis: {e}")
+        return redirect('historical_data')
+
+    for item in data:
+        item['source'] = 'Base_CSV'
+        
+    db_records = DataBendungan.objects.all()
+    for r in db_records:
+        if r.jam_kode == 0 or r.jam_kode == 6:
+            time_str = "06:00"
+        elif r.jam_kode == 1 or r.jam_kode == 12:
+            time_str = "12:00"
+        elif r.jam_kode == 2 or r.jam_kode == 18 or r.jam_kode == 17:
+            time_str = "18:00"
+        else:
+            time_str = f"{int(r.jam_kode):02d}:00"
+        
+        datetime_str = f"{r.tanggal.strftime('%Y-%m-%d')} {time_str}"
+        
+        db_item = {
+            'datetime': datetime_str,
+            'tma_m': r.tma,
+            'curah_hujan_mm': r.curah_hujan_mm,
+            'smd_kanan_q_ls': r.smd_kanan_q_ls,
+            'smd_kiri_q_ls': r.smd_kiri_q_ls,
+            'jam_kode': r.jam_kode,
+            'cuaca_kode': r.cuaca_kode,
+            'source': 'DataBendungan_Manual'
+        }
+        
+        existing_idx = next((i for i, item in enumerate(data) if item.get('datetime') == datetime_str), None)
+        if existing_idx is not None:
+            data[existing_idx].update(db_item)
+        else:
+            data.append(db_item)
+            
+    df = pd.DataFrame(data)
+    
+    if not df.empty and 'datetime' in df.columns:
+        df['datetime_dt'] = pd.to_datetime(df['datetime'], errors='coerce')
+        df = df.sort_values(by='datetime_dt')
+        df = df.drop(columns=['datetime_dt'])
+        
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="Bajulmati_Dataset_Aktual.csv"'
+    
+    df.to_csv(response, index=False)
+    return response
+
 def historical_data_view(request):
     """View to query and display historical data from the original dataset and manual DB logs."""
     target_date = request.GET.get('target_date', '')
     data = []
     
-    if target_date:
-        engine = MLEngine()
-        # 1. Fetch CSV records
-        data = engine.get_historical_data(target_date)
-        # Ensure all CSV items have a source tag
-        for item in data:
-            item['source'] = 'CSV'
+    engine = MLEngine()
+    # 1. Fetch CSV records
+    data = engine.get_historical_data(target_date)
+    # Ensure all CSV items have a source tag
+    for item in data:
+        item['source'] = 'CSV'
 
-        # 2. Fetch database records for the target date
-        try:
+    # 2. Fetch database records
+    try:
+        if target_date:
             db_records = DataBendungan.objects.filter(tanggal=target_date)
-            for r in db_records:
-                # Map jam_kode to standard time formats
-                if r.jam_kode == 0 or r.jam_kode == 6:
-                    time_str = "06:00"
-                elif r.jam_kode == 1 or r.jam_kode == 12:
-                    time_str = "12:00"
-                elif r.jam_kode == 2 or r.jam_kode == 18 or r.jam_kode == 17:
-                    time_str = "18:00"
-                else:
-                    time_str = f"{int(r.jam_kode):02d}:00"
-                
-                datetime_str = f"{r.tanggal.strftime('%Y-%m-%d')} {time_str}"
-                
-                # Determine status from TMA
-                tma_val = r.tma
-                if tma_val < 87.60:
-                    status_val = "Aman"
-                elif tma_val < 89.487:
-                    status_val = "Waspada"
-                elif tma_val < 91.30:
-                    status_val = "Siaga"
-                else:
-                    status_val = "Awas"
-                    
-                db_item = {
-                    'datetime': datetime_str,
-                    'tma_m': tma_val,
-                    'curah_hujan_mm': r.curah_hujan_mm,
-                    'smd_kanan_q_ls': r.smd_kanan_q_ls,
-                    'smd_kiri_q_ls': r.smd_kiri_q_ls,
-                    'status': status_val,
-                    'source': 'Database'
-                }
-                
-                # Override if datetime already exists in CSV
-                existing_idx = next((i for i, item in enumerate(data) if item['datetime'] == datetime_str), None)
-                if existing_idx is not None:
-                    data[existing_idx] = db_item
-                else:
-                    data.append(db_item)
+        else:
+            db_records = DataBendungan.objects.all()
             
-            # Sort by datetime string ascending
-            data.sort(key=lambda x: x['datetime'])
-        except Exception as e:
-            print(f"Error merging DB records in historical_data_view: {e}")
+        for r in db_records:
+            # Map jam_kode to standard time formats
+            if r.jam_kode == 0 or r.jam_kode == 6:
+                time_str = "06:00"
+            elif r.jam_kode == 1 or r.jam_kode == 12:
+                time_str = "12:00"
+            elif r.jam_kode == 2 or r.jam_kode == 18 or r.jam_kode == 17:
+                time_str = "18:00"
+            else:
+                time_str = f"{int(r.jam_kode):02d}:00"
+            
+            datetime_str = f"{r.tanggal.strftime('%Y-%m-%d')} {time_str}"
+            
+            # Determine status from TMA
+            tma_val = r.tma
+            if tma_val < 87.60:
+                status_val = "Aman"
+            elif tma_val < 89.487:
+                status_val = "Waspada"
+            elif tma_val < 91.30:
+                status_val = "Siaga"
+            else:
+                status_val = "Awas"
+                
+            db_item = {
+                'datetime': datetime_str,
+                'tma_m': tma_val,
+                'curah_hujan_mm': r.curah_hujan_mm,
+                'smd_kanan_q_ls': r.smd_kanan_q_ls,
+                'smd_kiri_q_ls': r.smd_kiri_q_ls,
+                'status': status_val,
+                'source': 'Database'
+            }
+            
+            # Override if datetime already exists in CSV
+            existing_idx = next((i for i, item in enumerate(data) if item['datetime'] == datetime_str), None)
+            if existing_idx is not None:
+                data[existing_idx] = db_item
+            else:
+                data.append(db_item)
         
+        # Sort by datetime string descending
+        data.sort(key=lambda x: x['datetime'], reverse=True)
+    except Exception as e:
+        print(f"Error merging DB records in historical_data_view: {e}")
+        
+    paginator = Paginator(data, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     context = {
         'target_date': target_date,
-        'historical_data': data,
+        'page_obj': page_obj,
     }
     return render(request, 'dashboard/historical_data.html', context)
 

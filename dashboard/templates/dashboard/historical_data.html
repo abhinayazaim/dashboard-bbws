@@ -8,7 +8,11 @@
         <h2 class="font-display-lg text-display-lg text-on-surface mb-base">Data Historis Aktual</h2>
         <p class="font-body-md text-body-md text-on-surface-variant">Cari dan lihat data aktual waduk Bajulmati berdasarkan tanggal tertentu di masa lalu.</p>
     </div>
-    <div>
+    <div class="flex gap-sm">
+        <a href="{% url 'export_actual_dataset_csv' %}" class="flex items-center gap-xs px-4 py-2.5 bg-transparent border border-[#333333] text-[#e0e0e0] font-label-caps text-label-caps rounded hover:bg-surface-bright transition-colors text-center">
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            EXPORT DATASET AKTUAL
+        </a>
         <a href="{% url 'input_data' %}" class="flex items-center gap-xs px-4 py-2.5 bg-primary-container hover:bg-primary-container/80 text-[#e0e0e0] font-label-caps text-label-caps rounded transition-colors text-center">
             <span class="material-symbols-outlined text-[18px]">add</span>
             TAMBAH DATA BARU
@@ -33,7 +37,10 @@
 <!-- Results Section -->
 <div class="bg-[#1e1e1e] border border-[#333333] rounded-lg overflow-hidden">
     <div class="p-margin border-b border-[#333333] flex justify-between items-center bg-[#1a1b1f]">
-        <h3 class="font-h2 text-h2 text-on-surface">Hasil Pencarian: {{ target_date|default:"Belum ada pencarian" }}</h3>
+        <h3 class="font-h2 text-h2 text-on-surface">Hasil Pencarian: {{ target_date|default:"Semua Data" }}</h3>
+        {% if target_date %}
+        <a href="{% url 'historical_data' %}" class="text-sm text-primary hover:text-primary/80 transition-colors">Reset Filter</a>
+        {% endif %}
     </div>
     
     <div class="overflow-x-auto">
@@ -50,8 +57,8 @@
                 </tr>
             </thead>
             <tbody class="divide-y divide-[#333333]">
-                {% if historical_data %}
-                    {% for row in historical_data %}
+                {% if page_obj %}
+                    {% for row in page_obj %}
                     <tr class="hover:bg-[#1a1b1f] transition-colors">
                         <td class="py-md px-margin font-body-sm text-on-surface">{{ row.datetime }}</td>
                         <td class="py-md px-margin font-body-sm text-on-surface">{{ row.tma_m|floatformat:3 }}</td>
@@ -84,7 +91,7 @@
                             {% if target_date %}
                                 Tidak ada data yang ditemukan untuk tanggal tersebut.
                             {% else %}
-                                Silakan pilih tanggal untuk melihat riwayat data.
+                                Tidak ada data historis yang tersedia.
                             {% endif %}
                         </td>
                     </tr>
@@ -92,6 +99,36 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="bg-[#1a1b1f] border-t border-[#333333] p-sm flex items-center justify-between">
+        <span class="font-body-sm text-body-sm text-on-surface-variant">Menampilkan {{ page_obj.start_index }}-{{ page_obj.end_index }} dari {{ page_obj.paginator.count }} data</span>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if target_date %}&target_date={{ target_date }}{% endif %}" class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant hover:bg-[#2a2a2a] hover:text-on-surface">
+                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </a>
+            {% else %}
+            <button class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant opacity-50 cursor-not-allowed" disabled>
+                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </button>
+            {% endif %}
+            
+            <button class="w-8 h-8 flex items-center justify-center rounded bg-[#1F3864] text-[#e0e0e0] font-data-mono text-data-mono">{{ page_obj.number }}</button>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if target_date %}&target_date={{ target_date }}{% endif %}" class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant hover:bg-[#2a2a2a] hover:text-on-surface">
+                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+            </a>
+            {% else %}
+            <button class="w-8 h-8 flex items-center justify-center rounded border border-[#333333] text-on-surface-variant opacity-50 cursor-not-allowed" disabled>
+                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 

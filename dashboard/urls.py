@@ -13,6 +13,8 @@ urlpatterns = [
     path('api/retrain-model/', views.retrain_model_api, name='retrain_model_api'),
     path('export/csv/', views.export_csv_view, name='export_csv'),
     path('export/pdf/', views.export_pdf_view, name='export_pdf'),
+    path('export/dataset-csv/', views.export_dataset_csv_view, name='export_dataset_csv'),
+    path('export/actual-dataset-csv/', views.export_actual_dataset_csv_view, name='export_actual_dataset_csv'),
     path('historical-data/', views.historical_data_view, name='historical_data'),
     path('reset/', views.reset_data_view, name='reset_data'),
 ]
